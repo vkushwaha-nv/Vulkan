@@ -757,6 +757,8 @@ void VulkanExampleBase::submitFrame()
 		VK_CHECK_RESULT(result);
 	}
 	VK_CHECK_RESULT(vkQueueWaitIdle(queue));
+	VK_CHECK_RESULT(vkQueueWaitIdle(transferQueue));
+	VK_CHECK_RESULT(vkQueueWaitIdle(computeQueue));
 }
 
 VulkanExampleBase::VulkanExampleBase(bool enableValidation)
@@ -1044,8 +1046,10 @@ bool VulkanExampleBase::initVulkan()
 	}
 	device = vulkanDevice->logicalDevice;
 
-	// Get a graphics queue from the device
+	// Get a graphics/transfer/compute queue from the device
 	vkGetDeviceQueue(device, vulkanDevice->queueFamilyIndices.graphics, 0, &queue);
+	vkGetDeviceQueue(device, vulkanDevice->queueFamilyIndices.transfer, 0, &transferQueue);
+	vkGetDeviceQueue(device, vulkanDevice->queueFamilyIndices.compute, 0, &computeQueue);
 
 	// Find a suitable depth and/or stencil format
 	VkBool32 validFormat{ false };
@@ -1077,6 +1081,12 @@ bool VulkanExampleBase::initVulkan()
 	submitInfo.pWaitSemaphores = &semaphores.presentComplete;
 	submitInfo.signalSemaphoreCount = 1;
 	submitInfo.pSignalSemaphores = &semaphores.renderComplete;
+
+	transferSubmitInfo = vks::initializers::submitInfo();
+	transferSubmitInfo.pWaitDstStageMask = &transferSubmitPipelineStages;
+
+	computeSubmitInfo = vks::initializers::submitInfo();
+	computeSubmitInfo.pWaitDstStageMask = &computeSubmitPipelineStages;
 
 	return true;
 }
