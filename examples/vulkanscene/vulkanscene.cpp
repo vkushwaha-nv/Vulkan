@@ -16,6 +16,7 @@
 
 VulkanExample::VulkanExample() : VulkanExampleBase(ENABLE_VALIDATION)
 {
+    srand((unsigned int)time(NULL));
     title = "Vulkan Demo Scene - (c) by Sascha Willems";
     camera.type = Camera::CameraType::lookat;
     //camera.flipY = true;
@@ -42,11 +43,11 @@ VulkanExample::~VulkanExample()
 
     uniformData.meshVS.destroy();
 
-    randomBuffers.buffer1.destroy();
-    randomBuffers.buffer2.destroy();
-    randomBuffers.buffer3.destroy();
-    randomBuffers.buffer4.destroy();
-    randomBuffers.buffer5.destroy();
+    sboBuffers.buffer1.destroy();
+    sboBuffers.buffer2.destroy();
+    sboBuffers.buffer3.destroy();
+    sboBuffers.buffer4.destroy();
+    sboBuffers.buffer5.destroy();
 
     textures.skybox.destroy();
     destroyCommandBuffers();
@@ -273,6 +274,9 @@ void VulkanExample::render()
         return;
     if (MAX_DRAW_FRAMES == 0 || currentFrameCounter < MAX_DRAW_FRAMES) {
         draw();
+    }
+    if (MAX_DRAW_FRAMES != 0 && currentFrameCounter > MAX_DRAW_FRAMES) {
+        exit(0);
     }
     currentFrameCounter++;
 }

@@ -14,15 +14,15 @@
 #include "VulkanglTFModel.h"
 #include "vulkanscene.h"
 
-void VulkanExample::createSBOBuffers()
+void VulkanExample::createBuffers()
 {
     // Create 5 SBO buffers on device
     uint32_t usageFlags = (VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT);
-    vulkanDevice->createBuffer(usageFlags, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &randomBuffers.buffer1, RANDOM_BUFFER_SIZE);
-    vulkanDevice->createBuffer(usageFlags, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &randomBuffers.buffer2, RANDOM_BUFFER_SIZE);
-    vulkanDevice->createBuffer(usageFlags, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &randomBuffers.buffer3, RANDOM_BUFFER_SIZE);
-    vulkanDevice->createBuffer(usageFlags, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &randomBuffers.buffer4, RANDOM_BUFFER_SIZE);
-    vulkanDevice->createBuffer(usageFlags, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &randomBuffers.buffer5, RANDOM_BUFFER_SIZE);
+    VK_CHECK_RESULT(vulkanDevice->createBuffer(usageFlags, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &sboBuffers.buffer1, RANDOM_BUFFER_SIZE));
+    VK_CHECK_RESULT(vulkanDevice->createBuffer(usageFlags, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &sboBuffers.buffer2, RANDOM_BUFFER_SIZE));
+    VK_CHECK_RESULT(vulkanDevice->createBuffer(usageFlags, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &sboBuffers.buffer3, RANDOM_BUFFER_SIZE));
+    VK_CHECK_RESULT(vulkanDevice->createBuffer(usageFlags, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &sboBuffers.buffer4, RANDOM_BUFFER_SIZE));
+    VK_CHECK_RESULT(vulkanDevice->createBuffer(usageFlags, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &sboBuffers.buffer5, RANDOM_BUFFER_SIZE));
 }
 
 void VulkanExample::createCommandPoolAndBuffers()
@@ -83,17 +83,41 @@ void VulkanExample::buildOneTimeSubmitCommandBuffers()
     VK_CHECK_RESULT(vkBeginCommandBuffer(oneTimeSubmitCmdBuffer, &cmdBufInfo));
 
     // Copy identifier
-    int pData[] = { 0x657921, 0x657922 };
-    vkCmdUpdateBuffer(oneTimeSubmitCmdBuffer, randomBuffers.buffer1.buffer, 0, sizeof(uint32_t) * 2, pData);
+    int pData[] = { 0x657921, 0x1000 };
+    vkCmdUpdateBuffer(oneTimeSubmitCmdBuffer, sboBuffers.buffer1.buffer, 0, sizeof(uint32_t) * 2, pData);
 
     // fill a buffer
-    vkCmdFillBuffer(oneTimeSubmitCmdBuffer, randomBuffers.buffer1.buffer, 0, RANDOM_BUFFER_SIZE, 0x11111111);
-    vkCmdFillBuffer(oneTimeSubmitCmdBuffer, randomBuffers.buffer2.buffer, 0, RANDOM_BUFFER_SIZE, 0x22222222);
-    vkCmdFillBuffer(oneTimeSubmitCmdBuffer, randomBuffers.buffer3.buffer, 0, RANDOM_BUFFER_SIZE, 0x33333333);
-    vkCmdFillBuffer(oneTimeSubmitCmdBuffer, randomBuffers.buffer4.buffer, 0, RANDOM_BUFFER_SIZE, 0x44444444);
-    vkCmdFillBuffer(oneTimeSubmitCmdBuffer, randomBuffers.buffer5.buffer, 0, RANDOM_BUFFER_SIZE, 0x55555555);
+    vkCmdFillBuffer(oneTimeSubmitCmdBuffer, sboBuffers.buffer1.buffer, 0, RANDOM_BUFFER_SIZE, 0x11111111);
+    vkCmdFillBuffer(oneTimeSubmitCmdBuffer, sboBuffers.buffer2.buffer, 0, RANDOM_BUFFER_SIZE, 0x22222222);
+    vkCmdFillBuffer(oneTimeSubmitCmdBuffer, sboBuffers.buffer3.buffer, 0, RANDOM_BUFFER_SIZE, 0x33333333);
+    vkCmdFillBuffer(oneTimeSubmitCmdBuffer, sboBuffers.buffer4.buffer, 0, RANDOM_BUFFER_SIZE, 0x44444444);
+    vkCmdFillBuffer(oneTimeSubmitCmdBuffer, sboBuffers.buffer5.buffer, 0, RANDOM_BUFFER_SIZE, 0x55555555);
 
     VK_CHECK_RESULT(vkEndCommandBuffer(oneTimeSubmitCmdBuffer));
+}
+
+void VulkanExample::addCopyCommands(uint32_t copyCount, VkCommandBuffer cmdBuffer, VkDeviceSize copySize)
+{
+    VkBufferCopy copyRegion = {};
+    copyRegion.size = copySize;
+    const uint32_t numBuffers = 5; // 5 buffers
+    VkBuffer bufferList[numBuffers] = {
+        sboBuffers.buffer1.buffer,
+        sboBuffers.buffer2.buffer,
+        sboBuffers.buffer3.buffer,
+        sboBuffers.buffer4.buffer,
+        sboBuffers.buffer5.buffer,
+    };
+
+    for (uint32_t i=0; i<copyCount; i++) {
+        int srcRandBuffer = rand() % numBuffers;
+        int dstRandBuffer = rand() % numBuffers;
+        if (srcRandBuffer == dstRandBuffer) {
+            dstRandBuffer++;
+            dstRandBuffer = dstRandBuffer % numBuffers;
+        }
+        vkCmdCopyBuffer(cmdBuffer, bufferList[srcRandBuffer], bufferList[dstRandBuffer], 1, &copyRegion);
+    }
 }
 
 void VulkanExample::buildTransferCommandBuffers(uint32_t buildMask)
@@ -108,31 +132,11 @@ void VulkanExample::buildTransferCommandBuffers(uint32_t buildMask)
         VK_CHECK_RESULT(vkBeginCommandBuffer(copyCmdBuffers[i], &cmdBufInfo));
 
         // Copy identifier
-        int pData[] = { 0x657921, 0x657922 };
-        vkCmdUpdateBuffer(copyCmdBuffers[i], randomBuffers.buffer1.buffer, 0, sizeof(uint32_t) * 2, pData);
+        int pData[] = { 0x657921, 0x1001 };
+        vkCmdUpdateBuffer(copyCmdBuffers[i], sboBuffers.buffer1.buffer, 0, sizeof(uint32_t) * 2, pData);
 
-        VkBufferCopy copyRegion = {};
-        copyRegion.size = RANDOM_BUFFER_SIZE/1;
-        vkCmdCopyBuffer(copyCmdBuffers[i], randomBuffers.buffer5.buffer, randomBuffers.buffer2.buffer, 1, &copyRegion);
-        vkCmdCopyBuffer(copyCmdBuffers[i], randomBuffers.buffer2.buffer, randomBuffers.buffer3.buffer, 1, &copyRegion);
-        vkCmdCopyBuffer(copyCmdBuffers[i], randomBuffers.buffer2.buffer, randomBuffers.buffer4.buffer, 1, &copyRegion);
-        vkCmdCopyBuffer(copyCmdBuffers[i], randomBuffers.buffer4.buffer, randomBuffers.buffer5.buffer, 1, &copyRegion);
-        vkCmdCopyBuffer(copyCmdBuffers[i], randomBuffers.buffer5.buffer, randomBuffers.buffer2.buffer, 1, &copyRegion);
-        vkCmdCopyBuffer(copyCmdBuffers[i], randomBuffers.buffer3.buffer, randomBuffers.buffer4.buffer, 1, &copyRegion);
-        vkCmdCopyBuffer(copyCmdBuffers[i], randomBuffers.buffer2.buffer, randomBuffers.buffer5.buffer, 1, &copyRegion);
-        vkCmdCopyBuffer(copyCmdBuffers[i], randomBuffers.buffer3.buffer, randomBuffers.buffer2.buffer, 1, &copyRegion);
-        vkCmdCopyBuffer(copyCmdBuffers[i], randomBuffers.buffer4.buffer, randomBuffers.buffer3.buffer, 1, &copyRegion);
-        vkCmdCopyBuffer(copyCmdBuffers[i], randomBuffers.buffer5.buffer, randomBuffers.buffer2.buffer, 1, &copyRegion);
-        vkCmdCopyBuffer(copyCmdBuffers[i], randomBuffers.buffer2.buffer, randomBuffers.buffer3.buffer, 1, &copyRegion);
-        vkCmdCopyBuffer(copyCmdBuffers[i], randomBuffers.buffer2.buffer, randomBuffers.buffer4.buffer, 1, &copyRegion);
-        vkCmdCopyBuffer(copyCmdBuffers[i], randomBuffers.buffer4.buffer, randomBuffers.buffer5.buffer, 1, &copyRegion);
-        vkCmdCopyBuffer(copyCmdBuffers[i], randomBuffers.buffer5.buffer, randomBuffers.buffer2.buffer, 1, &copyRegion);
-        vkCmdCopyBuffer(copyCmdBuffers[i], randomBuffers.buffer3.buffer, randomBuffers.buffer4.buffer, 1, &copyRegion);
-        vkCmdCopyBuffer(copyCmdBuffers[i], randomBuffers.buffer1.buffer, randomBuffers.buffer5.buffer, 1, &copyRegion);
-        vkCmdCopyBuffer(copyCmdBuffers[i], randomBuffers.buffer4.buffer, randomBuffers.buffer2.buffer, 1, &copyRegion);
-        vkCmdCopyBuffer(copyCmdBuffers[i], randomBuffers.buffer5.buffer, randomBuffers.buffer3.buffer, 1, &copyRegion);
+        addCopyCommands(20 /* num copies */, copyCmdBuffers[i], RANDOM_BUFFER_SIZE);
 
-       
         VK_CHECK_RESULT(vkEndCommandBuffer(copyCmdBuffers[i]));
     }
 }
@@ -145,37 +149,13 @@ void VulkanExample::buildComputeCommandBuffers(uint32_t buildMask)
         if (((1 << i) & buildMask) == 0) {
             continue;
         }
-
         VK_CHECK_RESULT(vkBeginCommandBuffer(computeCmdBuffers[i], &cmdBufInfo));
 
         // Copy identifier
-        int pData[] = { 0x657921, 0x657922 };
-        vkCmdUpdateBuffer(computeCmdBuffers[i], randomBuffers.buffer1.buffer, 0, sizeof(uint32_t) * 2, pData);
+        int pData[] = { 0x657921, 0x1002 };
+        vkCmdUpdateBuffer(computeCmdBuffers[i], sboBuffers.buffer1.buffer, 0, sizeof(uint32_t) * 2, pData);
 
-        // fill a buffer
-        vkCmdFillBuffer(computeCmdBuffers[i], randomBuffers.buffer1.buffer, 0, RANDOM_BUFFER_SIZE, pData[0]);
-        
-         VkBufferCopy copyRegion = {};
-        copyRegion.size = RANDOM_BUFFER_SIZE/1;
-        vkCmdCopyBuffer(computeCmdBuffers[i], randomBuffers.buffer5.buffer, randomBuffers.buffer2.buffer, 1, &copyRegion);
-        vkCmdCopyBuffer(computeCmdBuffers[i], randomBuffers.buffer2.buffer, randomBuffers.buffer3.buffer, 1, &copyRegion);
-        vkCmdCopyBuffer(computeCmdBuffers[i], randomBuffers.buffer2.buffer, randomBuffers.buffer4.buffer, 1, &copyRegion);
-        vkCmdCopyBuffer(computeCmdBuffers[i], randomBuffers.buffer4.buffer, randomBuffers.buffer5.buffer, 1, &copyRegion);
-        vkCmdCopyBuffer(computeCmdBuffers[i], randomBuffers.buffer5.buffer, randomBuffers.buffer2.buffer, 1, &copyRegion);
-        vkCmdCopyBuffer(computeCmdBuffers[i], randomBuffers.buffer3.buffer, randomBuffers.buffer4.buffer, 1, &copyRegion);
-        vkCmdCopyBuffer(computeCmdBuffers[i], randomBuffers.buffer2.buffer, randomBuffers.buffer5.buffer, 1, &copyRegion);
-        vkCmdCopyBuffer(computeCmdBuffers[i], randomBuffers.buffer3.buffer, randomBuffers.buffer2.buffer, 1, &copyRegion);
-        vkCmdCopyBuffer(computeCmdBuffers[i], randomBuffers.buffer4.buffer, randomBuffers.buffer3.buffer, 1, &copyRegion);
-        vkCmdCopyBuffer(computeCmdBuffers[i], randomBuffers.buffer5.buffer, randomBuffers.buffer2.buffer, 1, &copyRegion);
-        vkCmdCopyBuffer(computeCmdBuffers[i], randomBuffers.buffer2.buffer, randomBuffers.buffer3.buffer, 1, &copyRegion);
-        vkCmdCopyBuffer(computeCmdBuffers[i], randomBuffers.buffer2.buffer, randomBuffers.buffer4.buffer, 1, &copyRegion);
-        vkCmdCopyBuffer(computeCmdBuffers[i], randomBuffers.buffer4.buffer, randomBuffers.buffer5.buffer, 1, &copyRegion);
-        vkCmdCopyBuffer(computeCmdBuffers[i], randomBuffers.buffer5.buffer, randomBuffers.buffer2.buffer, 1, &copyRegion);
-        vkCmdCopyBuffer(computeCmdBuffers[i], randomBuffers.buffer3.buffer, randomBuffers.buffer4.buffer, 1, &copyRegion);
-        vkCmdCopyBuffer(computeCmdBuffers[i], randomBuffers.buffer1.buffer, randomBuffers.buffer5.buffer, 1, &copyRegion);
-        vkCmdCopyBuffer(computeCmdBuffers[i], randomBuffers.buffer4.buffer, randomBuffers.buffer2.buffer, 1, &copyRegion);
-        vkCmdCopyBuffer(computeCmdBuffers[i], randomBuffers.buffer5.buffer, randomBuffers.buffer3.buffer, 1, &copyRegion);
-
+        addCopyCommands(10 /* num copies */, computeCmdBuffers[i], RANDOM_BUFFER_SIZE);
 
         VK_CHECK_RESULT(vkEndCommandBuffer(computeCmdBuffers[i]));
     }
@@ -202,7 +182,7 @@ void VulkanExample::prepare()
     buildDefaultCommandBuffers();
 
     //----------------VKKK--------------------------
-    createSBOBuffers();
+    createBuffers();
     createCommandPoolAndBuffers();
 
     buildOneTimeSubmitCommandBuffers();

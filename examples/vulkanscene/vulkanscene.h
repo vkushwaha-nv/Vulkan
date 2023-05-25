@@ -10,6 +10,7 @@
 
 static unsigned currentFrameCounter = 0;
 
+
 class VulkanExample : public VulkanExampleBase
 {
 public:
@@ -57,7 +58,7 @@ public:
         vks::Buffer buffer3;
         vks::Buffer buffer4;
         vks::Buffer buffer5;
-    } randomBuffers;
+    } sboBuffers;
 
     // Graphics command pool
     VkCommandPool graphicsCommandPool;
@@ -89,14 +90,14 @@ public:
     void prepareUniformBuffers(); 
 
     // ----VKKK------------------------------------------------------
-    void createSBOBuffers();
+    void createBuffers();
     void createCommandPoolAndBuffers();
     void buildOneTimeSubmitCommandBuffers();
     void buildTransferCommandBuffers(uint32_t buildMask);
+    void addCopyCommands(uint32_t copyCount, VkCommandBuffer cmdBuffer, VkDeviceSize copySize);
     void buildComputeCommandBuffers(uint32_t buildMask);
     void destroyCommandBuffers();
     // ------------------------------------------------------------------
-
 
 
     void updateUniformBuffers();
