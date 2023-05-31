@@ -1,0 +1,27 @@
+#version 450
+
+layout (local_size_x = 1, local_size_y = 1) in;
+
+layout(push_constant) uniform PushConstants {
+   uint srcOffset;
+   uint dstOffset;
+   uint size;
+} pushConstants;
+
+
+layout(std430, binding=0) buffer ReadData {
+    uint inData[];
+};
+
+layout(std430, binding=1) buffer WriteData {
+    uint outData[];
+};
+
+
+void main()
+{
+    for (int i=0; i<pushConstants.size; ++i)
+    {
+        outData[pushConstants.dstOffset+i] = inData[pushConstants.srcOffset+i];
+    }
+}

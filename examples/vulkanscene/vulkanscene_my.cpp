@@ -25,6 +25,48 @@ void VulkanExample::createBuffers()
     VK_CHECK_RESULT(vulkanDevice->createBuffer(usageFlags, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &sboBuffers.buffer5, RANDOM_BUFFER_SIZE));
 }
 
+void VulkanExample::prepareCompute()
+{
+    // Bindings
+    std::vector<VkDescriptorSetLayoutBinding> setLayoutBindings = {
+        // Binding 0: input SBO
+        vks::initializers::descriptorSetLayoutBinding(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_COMPUTE_BIT, 0),
+        // Binding 1: Output SBO
+        vks::initializers::descriptorSetLayoutBinding(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_COMPUTE_BIT, 1),
+    };
+
+    VkDescriptorSetLayoutCreateInfo descriptorLayout = vks::initializers::descriptorSetLayoutCreateInfo(setLayoutBindings);
+    VK_CHECK_RESULT(vkCreateDescriptorSetLayout(device, &descriptorLayout, nullptr, &computePipelines.descriptorSetLayout));
+
+    VkPipelineLayoutCreateInfo pPipelineLayoutCreateInfo =
+            vks::initializers::pipelineLayoutCreateInfo(&computePipelines.descriptorSetLayout, 1);
+    VkPushConstantRange pushConstantRange;
+    pushConstantRange.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+    pushConstantRange.offset = 0;
+    pushConstantRange.size = sizeof(computePushConstantData);
+
+    pPipelineLayoutCreateInfo.pushConstantRangeCount = 1;
+    pPipelineLayoutCreateInfo.pPushConstantRanges = &pushConstantRange;
+    VK_CHECK_RESULT(vkCreatePipelineLayout(device, &pPipelineLayoutCreateInfo, nullptr, &computePipelines.pipelineLayout));
+
+    VkDescriptorSetAllocateInfo allocInfo =
+        vks::initializers::descriptorSetAllocateInfo(descriptorPool, &computePipelines.descriptorSetLayout, 1);
+
+    VK_CHECK_RESULT(vkAllocateDescriptorSets(device, &allocInfo, &computePipelines.descriptorSet));
+
+    std::vector<VkWriteDescriptorSet> computeWriteDescriptorSets = {
+        vks::initializers::writeDescriptorSet(computePipelines.descriptorSet, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 0, &sboBuffers.buffer1.descriptor),
+        vks::initializers::writeDescriptorSet(computePipelines.descriptorSet, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, &sboBuffers.buffer2.descriptor)
+    };
+    vkUpdateDescriptorSets(device, (uint32_t)computeWriteDescriptorSets.size(), computeWriteDescriptorSets.data(), 0, NULL);
+
+    // Create compute shader pipelines
+    VkComputePipelineCreateInfo computePipelineCreateInfo = vks::initializers::computePipelineCreateInfo(computePipelines.pipelineLayout, 0);
+    std::string fileName = getShadersPath() + "vulkanscene/compute1.spv";
+    computePipelineCreateInfo.stage = loadShader(fileName, VK_SHADER_STAGE_COMPUTE_BIT);
+    VK_CHECK_RESULT(vkCreateComputePipelines(device, pipelineCache, 1, &computePipelineCreateInfo, nullptr, &computePipelines.pipeline1));
+}
+
 void VulkanExample::createCommandPoolAndBuffers()
 {
     // Create graphics cmdPool and graphics command buffers
@@ -157,6 +199,18 @@ void VulkanExample::buildComputeCommandBuffers(uint32_t buildMask)
 
         addCopyCommands(10 /* num copies */, computeCmdBuffers[i], RANDOM_BUFFER_SIZE);
 
+        vkCmdBindPipeline(computeCmdBuffers[i], VK_PIPELINE_BIND_POINT_COMPUTE, computePipelines.pipeline1);
+        vkCmdBindDescriptorSets(computeCmdBuffers[i], VK_PIPELINE_BIND_POINT_COMPUTE, computePipelines.pipelineLayout, 0, 1, &computePipelines.descriptorSet, 0, 0);
+
+        computePushConstantData.srcOffset = 0;
+        computePushConstantData.dstOffset = 0;
+        computePushConstantData.size = 100;
+        vkCmdPushConstants(computeCmdBuffers[i],  computePipelines.pipelineLayout, VK_SHADER_STAGE_COMPUTE_BIT, 0, 
+            sizeof(computePushConstantData), &computePushConstantData);
+
+        vkCmdDispatch(computeCmdBuffers[i], 1, 1, 1);
+
+
         VK_CHECK_RESULT(vkEndCommandBuffer(computeCmdBuffers[i]));
     }
 }
@@ -183,6 +237,7 @@ void VulkanExample::prepare()
 
     //----------------VKKK--------------------------
     createBuffers();
+    prepareCompute();
     createCommandPoolAndBuffers();
 
     buildOneTimeSubmitCommandBuffers();

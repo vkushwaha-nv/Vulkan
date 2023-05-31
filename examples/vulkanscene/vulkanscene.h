@@ -44,6 +44,19 @@ public:
         VkPipeline skybox;
     } pipelines;
 
+    struct {
+        uint32_t srcOffset;
+        uint32_t dstOffset;
+        uint32_t size;
+    } computePushConstantData;
+
+    struct {
+        VkPipelineLayout pipelineLayout;
+        VkDescriptorSet descriptorSet;
+        VkDescriptorSetLayout descriptorSetLayout;
+        VkPipeline pipeline1;
+    } computePipelines;
+
     VkPipelineLayout pipelineLayout;
     VkDescriptorSet descriptorSet;
     VkDescriptorSetLayout descriptorSetLayout;
@@ -84,6 +97,7 @@ public:
     void setupDescriptorPool();
     void setupDescriptorSetLayout();
     void setupDescriptorSet();
+    void prepareCompute();
     void preparePipelines();
     
     // Prepare and initialize uniform buffer containing shader uniforms

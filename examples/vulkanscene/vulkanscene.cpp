@@ -29,13 +29,18 @@ VulkanExample::VulkanExample() : VulkanExampleBase(ENABLE_VALIDATION)
 VulkanExample::~VulkanExample()
 {
     // Clean up used Vulkan resources
-    // Note : Inherited destructor cleans up resources stored in base class
     vkDestroyPipeline(device, pipelines.logos, nullptr);
     vkDestroyPipeline(device, pipelines.models, nullptr);
     vkDestroyPipeline(device, pipelines.skybox, nullptr);
 
     vkDestroyPipelineLayout(device, pipelineLayout, nullptr);
     vkDestroyDescriptorSetLayout(device, descriptorSetLayout, nullptr);
+
+    //destroy compute pipeline stuff
+    vkDestroyPipeline(device, computePipelines.pipeline1, nullptr);
+    vkDestroyPipelineLayout(device, computePipelines.pipelineLayout, nullptr);
+    vkDestroyDescriptorSetLayout(device, computePipelines.descriptorSetLayout, nullptr);
+
 
     for (auto demoModel : demoModels) {
         delete demoModel.glTF;
@@ -125,7 +130,8 @@ void VulkanExample::setupDescriptorPool()
     std::vector<VkDescriptorPoolSize> poolSizes =
     {
         vks::initializers::descriptorPoolSize(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 2),
-        vks::initializers::descriptorPoolSize(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1)
+        vks::initializers::descriptorPoolSize(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1),
+        vks::initializers::descriptorPoolSize(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 2)
     };
 
     VkDescriptorPoolCreateInfo descriptorPoolInfo =
