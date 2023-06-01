@@ -1,7 +1,7 @@
 #version 450
 #extension GL_EXT_shader_explicit_arithmetic_types_int64 : require
 
-layout (local_size_x = 32, local_size_y = 1) in;
+layout (local_size_x = 64, local_size_y = 1) in;
 
 layout(push_constant) uniform PushConstants {
    uint srcOffset;
@@ -28,7 +28,8 @@ void main()
     if (gl_GlobalInvocationID.x < pushConstants.size) {
         uint srcValue = inData[pushConstants.srcOffset + gl_GlobalInvocationID.x];
         uint dstValue = srcValue;
-
+        dstValue += dstValue + int(100*sin(pushConstants.temp1));
+        dstValue += dstValue + int(100*cos(pushConstants.temp2));
         outData[pushConstants.dstOffset + gl_GlobalInvocationID.x] = dstValue;
     }
 }

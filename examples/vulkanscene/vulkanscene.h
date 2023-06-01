@@ -1,12 +1,17 @@
 #define ENABLE_VALIDATION true
 
 #define MAX_DRAW_FRAMES 0 // 0 = INF
-#define RANDOM_BUFFER_SIZE (512 * 1024 * 1024ULL)
-#define SWAP_CHAIN_IMAGE_COUNT 3
+#define SBO_BUFFER_MAX_SIZE (512 * 1024 * 1024ULL)
+#define SWAP_CHAIN_IMAGE_COUNT  3
 
-#define QUEUE_GRAPHICS 0
-#define QUEUE_COMPUTE  1
-#define QUEUE_COPY     2
+#define NUM_DESCRIPTOR_SETS     5
+#define NUM_COMPUTE_PIPELINES   5
+
+#define COMPLEXITY_LEVEL_1     0
+#define COMPLEXITY_LEVEL_2     1
+#define COMPLEXITY_LEVEL_3     2
+#define COMPLEXITY_LEVEL_4     3
+#define COMPLEXITY_LEVEL_5     4
 
 static unsigned currentFrameCounter = 0;
 
@@ -48,13 +53,25 @@ public:
         uint32_t srcOffset;
         uint32_t dstOffset;
         uint32_t size;
+        float temp1;
+        float temp2;
+        float temp3;
+        float temp4;
     } computePushConstantData;
 
     struct {
         VkPipelineLayout pipelineLayout;
-        VkDescriptorSet descriptorSet;
         VkDescriptorSetLayout descriptorSetLayout;
+        VkDescriptorSet descriptorSet1;
+        VkDescriptorSet descriptorSet2;
+        VkDescriptorSet descriptorSet3;
+        VkDescriptorSet descriptorSet4;
+        VkDescriptorSet descriptorSet5;
         VkPipeline pipeline1;
+        VkPipeline pipeline2;
+        VkPipeline pipeline3;
+        VkPipeline pipeline4;
+        VkPipeline pipeline5;
     } computePipelines;
 
     VkPipelineLayout pipelineLayout;
@@ -108,7 +125,8 @@ public:
     void createCommandPoolAndBuffers();
     void buildOneTimeSubmitCommandBuffers();
     void buildTransferCommandBuffers(uint32_t buildMask);
-    void addCopyCommands(uint32_t copyCount, VkCommandBuffer cmdBuffer, VkDeviceSize copySize);
+    void addCopyCommands(VkCommandBuffer cmdBuffer, uint32_t copyCount, VkDeviceSize copySize);
+    void addDispatch(VkCommandBuffer cmdBuffer, uint32_t size_x, uint32_t size_y, uint32_t size_z, uint32_t complexity);
     void buildComputeCommandBuffers(uint32_t buildMask);
     void destroyCommandBuffers();
     // ------------------------------------------------------------------

@@ -18,11 +18,11 @@ void VulkanExample::createBuffers()
 {
     // Create 5 SBO buffers on device
     uint32_t usageFlags = (VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT);
-    VK_CHECK_RESULT(vulkanDevice->createBuffer(usageFlags, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &sboBuffers.buffer1, RANDOM_BUFFER_SIZE));
-    VK_CHECK_RESULT(vulkanDevice->createBuffer(usageFlags, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &sboBuffers.buffer2, RANDOM_BUFFER_SIZE));
-    VK_CHECK_RESULT(vulkanDevice->createBuffer(usageFlags, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &sboBuffers.buffer3, RANDOM_BUFFER_SIZE));
-    VK_CHECK_RESULT(vulkanDevice->createBuffer(usageFlags, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &sboBuffers.buffer4, RANDOM_BUFFER_SIZE));
-    VK_CHECK_RESULT(vulkanDevice->createBuffer(usageFlags, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &sboBuffers.buffer5, RANDOM_BUFFER_SIZE));
+    VK_CHECK_RESULT(vulkanDevice->createBuffer(usageFlags, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &sboBuffers.buffer1, SBO_BUFFER_MAX_SIZE));
+    VK_CHECK_RESULT(vulkanDevice->createBuffer(usageFlags, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &sboBuffers.buffer2, SBO_BUFFER_MAX_SIZE));
+    VK_CHECK_RESULT(vulkanDevice->createBuffer(usageFlags, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &sboBuffers.buffer3, SBO_BUFFER_MAX_SIZE));
+    VK_CHECK_RESULT(vulkanDevice->createBuffer(usageFlags, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &sboBuffers.buffer4, SBO_BUFFER_MAX_SIZE));
+    VK_CHECK_RESULT(vulkanDevice->createBuffer(usageFlags, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &sboBuffers.buffer5, SBO_BUFFER_MAX_SIZE));
 }
 
 void VulkanExample::prepareCompute()
@@ -52,19 +52,60 @@ void VulkanExample::prepareCompute()
     VkDescriptorSetAllocateInfo allocInfo =
         vks::initializers::descriptorSetAllocateInfo(descriptorPool, &computePipelines.descriptorSetLayout, 1);
 
-    VK_CHECK_RESULT(vkAllocateDescriptorSets(device, &allocInfo, &computePipelines.descriptorSet));
+    VK_CHECK_RESULT(vkAllocateDescriptorSets(device, &allocInfo, &computePipelines.descriptorSet1));
+    VK_CHECK_RESULT(vkAllocateDescriptorSets(device, &allocInfo, &computePipelines.descriptorSet2));
+    VK_CHECK_RESULT(vkAllocateDescriptorSets(device, &allocInfo, &computePipelines.descriptorSet3));
+    VK_CHECK_RESULT(vkAllocateDescriptorSets(device, &allocInfo, &computePipelines.descriptorSet4));
+    VK_CHECK_RESULT(vkAllocateDescriptorSets(device, &allocInfo, &computePipelines.descriptorSet5));
 
-    std::vector<VkWriteDescriptorSet> computeWriteDescriptorSets = {
-        vks::initializers::writeDescriptorSet(computePipelines.descriptorSet, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 0, &sboBuffers.buffer1.descriptor),
-        vks::initializers::writeDescriptorSet(computePipelines.descriptorSet, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, &sboBuffers.buffer2.descriptor)
+    // update descriptor sets
+    std::vector<VkWriteDescriptorSet> computeWriteDescriptorSets1 = {
+        vks::initializers::writeDescriptorSet(computePipelines.descriptorSet1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 0, &sboBuffers.buffer1.descriptor),
+        vks::initializers::writeDescriptorSet(computePipelines.descriptorSet1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, &sboBuffers.buffer2.descriptor)
     };
-    vkUpdateDescriptorSets(device, (uint32_t)computeWriteDescriptorSets.size(), computeWriteDescriptorSets.data(), 0, NULL);
+    vkUpdateDescriptorSets(device, (uint32_t)computeWriteDescriptorSets1.size(), computeWriteDescriptorSets1.data(), 0, NULL);
+    std::vector<VkWriteDescriptorSet> computeWriteDescriptorSets2 = {
+        vks::initializers::writeDescriptorSet(computePipelines.descriptorSet2, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 0, &sboBuffers.buffer2.descriptor),
+        vks::initializers::writeDescriptorSet(computePipelines.descriptorSet2, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, &sboBuffers.buffer3.descriptor)
+    };
+    vkUpdateDescriptorSets(device, (uint32_t)computeWriteDescriptorSets2.size(), computeWriteDescriptorSets2.data(), 0, NULL);
+    std::vector<VkWriteDescriptorSet> computeWriteDescriptorSets3 = {
+        vks::initializers::writeDescriptorSet(computePipelines.descriptorSet3, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 0, &sboBuffers.buffer3.descriptor),
+        vks::initializers::writeDescriptorSet(computePipelines.descriptorSet3, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, &sboBuffers.buffer4.descriptor)
+    };
+    vkUpdateDescriptorSets(device, (uint32_t)computeWriteDescriptorSets3.size(), computeWriteDescriptorSets3.data(), 0, NULL);
+    std::vector<VkWriteDescriptorSet> computeWriteDescriptorSets4 = {
+        vks::initializers::writeDescriptorSet(computePipelines.descriptorSet4, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 0, &sboBuffers.buffer4.descriptor),
+        vks::initializers::writeDescriptorSet(computePipelines.descriptorSet4, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, &sboBuffers.buffer5.descriptor)
+    };
+    vkUpdateDescriptorSets(device, (uint32_t)computeWriteDescriptorSets4.size(), computeWriteDescriptorSets4.data(), 0, NULL);
+    std::vector<VkWriteDescriptorSet> computeWriteDescriptorSets5 = {
+        vks::initializers::writeDescriptorSet(computePipelines.descriptorSet5, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 0, &sboBuffers.buffer5.descriptor),
+        vks::initializers::writeDescriptorSet(computePipelines.descriptorSet5, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, &sboBuffers.buffer1.descriptor)
+    };
+    vkUpdateDescriptorSets(device, (uint32_t)computeWriteDescriptorSets5.size(), computeWriteDescriptorSets5.data(), 0, NULL);
 
     // Create compute shader pipelines
     VkComputePipelineCreateInfo computePipelineCreateInfo = vks::initializers::computePipelineCreateInfo(computePipelines.pipelineLayout, 0);
-    std::string fileName = getShadersPath() + "vulkanscene/compute1.spv";
-    computePipelineCreateInfo.stage = loadShader(fileName, VK_SHADER_STAGE_COMPUTE_BIT);
+    std::string fileName1 = getShadersPath() + "vulkanscene/compute1.spv";
+    computePipelineCreateInfo.stage = loadShader(fileName1, VK_SHADER_STAGE_COMPUTE_BIT);
     VK_CHECK_RESULT(vkCreateComputePipelines(device, pipelineCache, 1, &computePipelineCreateInfo, nullptr, &computePipelines.pipeline1));
+
+    std::string fileName2 = getShadersPath() + "vulkanscene/compute2.spv";
+    computePipelineCreateInfo.stage = loadShader(fileName2, VK_SHADER_STAGE_COMPUTE_BIT);
+    VK_CHECK_RESULT(vkCreateComputePipelines(device, pipelineCache, 1, &computePipelineCreateInfo, nullptr, &computePipelines.pipeline2));
+
+    std::string fileName3 = getShadersPath() + "vulkanscene/compute3.spv";
+    computePipelineCreateInfo.stage = loadShader(fileName3, VK_SHADER_STAGE_COMPUTE_BIT);
+    VK_CHECK_RESULT(vkCreateComputePipelines(device, pipelineCache, 1, &computePipelineCreateInfo, nullptr, &computePipelines.pipeline3));
+
+    std::string fileName4 = getShadersPath() + "vulkanscene/compute4.spv";
+    computePipelineCreateInfo.stage = loadShader(fileName4, VK_SHADER_STAGE_COMPUTE_BIT);
+    VK_CHECK_RESULT(vkCreateComputePipelines(device, pipelineCache, 1, &computePipelineCreateInfo, nullptr, &computePipelines.pipeline4));
+
+    std::string fileName5 = getShadersPath() + "vulkanscene/compute5.spv";
+    computePipelineCreateInfo.stage = loadShader(fileName5, VK_SHADER_STAGE_COMPUTE_BIT);
+    VK_CHECK_RESULT(vkCreateComputePipelines(device, pipelineCache, 1, &computePipelineCreateInfo, nullptr, &computePipelines.pipeline5));
 }
 
 void VulkanExample::createCommandPoolAndBuffers()
@@ -129,16 +170,16 @@ void VulkanExample::buildOneTimeSubmitCommandBuffers()
     vkCmdUpdateBuffer(oneTimeSubmitCmdBuffer, sboBuffers.buffer1.buffer, 0, sizeof(uint32_t) * 2, pData);
 
     // fill a buffer
-    vkCmdFillBuffer(oneTimeSubmitCmdBuffer, sboBuffers.buffer1.buffer, 0, RANDOM_BUFFER_SIZE, 0x11111111);
-    vkCmdFillBuffer(oneTimeSubmitCmdBuffer, sboBuffers.buffer2.buffer, 0, RANDOM_BUFFER_SIZE, 0x22222222);
-    vkCmdFillBuffer(oneTimeSubmitCmdBuffer, sboBuffers.buffer3.buffer, 0, RANDOM_BUFFER_SIZE, 0x33333333);
-    vkCmdFillBuffer(oneTimeSubmitCmdBuffer, sboBuffers.buffer4.buffer, 0, RANDOM_BUFFER_SIZE, 0x44444444);
-    vkCmdFillBuffer(oneTimeSubmitCmdBuffer, sboBuffers.buffer5.buffer, 0, RANDOM_BUFFER_SIZE, 0x55555555);
+    vkCmdFillBuffer(oneTimeSubmitCmdBuffer, sboBuffers.buffer1.buffer, 0, SBO_BUFFER_MAX_SIZE, 0x11111111);
+    vkCmdFillBuffer(oneTimeSubmitCmdBuffer, sboBuffers.buffer2.buffer, 0, SBO_BUFFER_MAX_SIZE, 0x22222222);
+    vkCmdFillBuffer(oneTimeSubmitCmdBuffer, sboBuffers.buffer3.buffer, 0, SBO_BUFFER_MAX_SIZE, 0x33333333);
+    vkCmdFillBuffer(oneTimeSubmitCmdBuffer, sboBuffers.buffer4.buffer, 0, SBO_BUFFER_MAX_SIZE, 0x44444444);
+    vkCmdFillBuffer(oneTimeSubmitCmdBuffer, sboBuffers.buffer5.buffer, 0, SBO_BUFFER_MAX_SIZE, 0x55555555);
 
     VK_CHECK_RESULT(vkEndCommandBuffer(oneTimeSubmitCmdBuffer));
 }
 
-void VulkanExample::addCopyCommands(uint32_t copyCount, VkCommandBuffer cmdBuffer, VkDeviceSize copySize)
+void VulkanExample::addCopyCommands(VkCommandBuffer cmdBuffer, uint32_t copyCount, VkDeviceSize copySize)
 {
     VkBufferCopy copyRegion = {};
     copyRegion.size = copySize;
@@ -162,6 +203,62 @@ void VulkanExample::addCopyCommands(uint32_t copyCount, VkCommandBuffer cmdBuffe
     }
 }
 
+void VulkanExample::addDispatch(VkCommandBuffer cmdBuffer, uint32_t size_x, uint32_t size_y, uint32_t size_z, uint32_t complexity)
+{
+    // pick a pipeline based on complexity
+    {
+        if (complexity >= NUM_COMPUTE_PIPELINES) {
+            complexity = NUM_COMPUTE_PIPELINES - 1;
+        }
+        VkPipeline pipelineArray[] = {
+            computePipelines.pipeline1,
+            computePipelines.pipeline2,
+            computePipelines.pipeline3,
+            computePipelines.pipeline4,
+            computePipelines.pipeline5
+        };
+        vkCmdBindPipeline(cmdBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipelineArray[complexity]);
+    }
+
+    // pick a random descriptor set
+    {
+        int randDescriptorSet = rand() % NUM_DESCRIPTOR_SETS;
+        VkDescriptorSet descSetArray[] = {
+            computePipelines.descriptorSet1,
+            computePipelines.descriptorSet2,
+            computePipelines.descriptorSet3,
+            computePipelines.descriptorSet4,
+            computePipelines.descriptorSet5
+        };
+        vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, computePipelines.pipelineLayout, 0, 1, &descSetArray[randDescriptorSet], 0, 0);
+    }
+
+    // set push constant
+    {
+        computePushConstantData.srcOffset = 0;
+        computePushConstantData.dstOffset = 0;
+        computePushConstantData.size = SBO_BUFFER_MAX_SIZE;
+        computePushConstantData.temp1 = float(rand()%100 / 100.0f);
+        computePushConstantData.temp2 = float(rand()%100 / 100.0f);
+        computePushConstantData.temp3 = float(rand()%100 / 100.0f);
+        computePushConstantData.temp4 = float(rand()%100 / 100.0f);
+        vkCmdPushConstants(cmdBuffer,  computePipelines.pipelineLayout, VK_SHADER_STAGE_COMPUTE_BIT, 0,
+            sizeof(computePushConstantData), &computePushConstantData);
+    }
+
+    // don't let workgroup size be too big
+    if (size_x > vulkanDevice->properties.limits.maxComputeWorkGroupCount[0]) {
+        size_x = vulkanDevice->properties.limits.maxComputeWorkGroupCount[0];
+    }
+    if (size_y > vulkanDevice->properties.limits.maxComputeWorkGroupCount[1]) {
+        size_y = vulkanDevice->properties.limits.maxComputeWorkGroupCount[1];
+    }
+    if (size_z > vulkanDevice->properties.limits.maxComputeWorkGroupCount[2]) {
+        size_z = vulkanDevice->properties.limits.maxComputeWorkGroupCount[2];
+    }
+    vkCmdDispatch(cmdBuffer, size_x, size_y, size_z);
+}
+
 void VulkanExample::buildTransferCommandBuffers(uint32_t buildMask)
 {
     VkCommandBufferBeginInfo cmdBufInfo = vks::initializers::commandBufferBeginInfo();
@@ -177,7 +274,7 @@ void VulkanExample::buildTransferCommandBuffers(uint32_t buildMask)
         int pData[] = { 0x657921, 0x1001 };
         vkCmdUpdateBuffer(copyCmdBuffers[i], sboBuffers.buffer1.buffer, 0, sizeof(uint32_t) * 2, pData);
 
-        addCopyCommands(20 /* num copies */, copyCmdBuffers[i], RANDOM_BUFFER_SIZE);
+        addCopyCommands(copyCmdBuffers[i], 4 /* num copies */, SBO_BUFFER_MAX_SIZE/(1024 * 1024));
 
         VK_CHECK_RESULT(vkEndCommandBuffer(copyCmdBuffers[i]));
     }
@@ -197,19 +294,13 @@ void VulkanExample::buildComputeCommandBuffers(uint32_t buildMask)
         int pData[] = { 0x657921, 0x1002 };
         vkCmdUpdateBuffer(computeCmdBuffers[i], sboBuffers.buffer1.buffer, 0, sizeof(uint32_t) * 2, pData);
 
-        addCopyCommands(10 /* num copies */, computeCmdBuffers[i], RANDOM_BUFFER_SIZE);
+        addCopyCommands(computeCmdBuffers[i], 1 /* num copies */, SBO_BUFFER_MAX_SIZE/(1024 * 1024));
 
-        vkCmdBindPipeline(computeCmdBuffers[i], VK_PIPELINE_BIND_POINT_COMPUTE, computePipelines.pipeline1);
-        vkCmdBindDescriptorSets(computeCmdBuffers[i], VK_PIPELINE_BIND_POINT_COMPUTE, computePipelines.pipelineLayout, 0, 1, &computePipelines.descriptorSet, 0, 0);
-
-        computePushConstantData.srcOffset = 0;
-        computePushConstantData.dstOffset = 0;
-        computePushConstantData.size = 100;
-        vkCmdPushConstants(computeCmdBuffers[i],  computePipelines.pipelineLayout, VK_SHADER_STAGE_COMPUTE_BIT, 0, 
-            sizeof(computePushConstantData), &computePushConstantData);
-
-        vkCmdDispatch(computeCmdBuffers[i], 1, 1, 1);
-
+        addDispatch(computeCmdBuffers[i], 102400, 10, 10,     COMPLEXITY_LEVEL_1);
+        addDispatch(computeCmdBuffers[i], 102400, 10, 10,     COMPLEXITY_LEVEL_2);
+        addDispatch(computeCmdBuffers[i], 102400, 10, 10,     COMPLEXITY_LEVEL_3);
+        addDispatch(computeCmdBuffers[i], 102400, 10, 10,     COMPLEXITY_LEVEL_4);
+        addDispatch(computeCmdBuffers[i], 102400, 10, 10,     COMPLEXITY_LEVEL_5);
 
         VK_CHECK_RESULT(vkEndCommandBuffer(computeCmdBuffers[i]));
     }

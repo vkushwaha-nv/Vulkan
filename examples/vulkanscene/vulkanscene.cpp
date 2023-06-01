@@ -38,6 +38,10 @@ VulkanExample::~VulkanExample()
 
     //destroy compute pipeline stuff
     vkDestroyPipeline(device, computePipelines.pipeline1, nullptr);
+    vkDestroyPipeline(device, computePipelines.pipeline2, nullptr);
+    vkDestroyPipeline(device, computePipelines.pipeline3, nullptr);
+    vkDestroyPipeline(device, computePipelines.pipeline4, nullptr);
+    vkDestroyPipeline(device, computePipelines.pipeline5, nullptr);
     vkDestroyPipelineLayout(device, computePipelines.pipelineLayout, nullptr);
     vkDestroyDescriptorSetLayout(device, computePipelines.descriptorSetLayout, nullptr);
 
@@ -131,14 +135,14 @@ void VulkanExample::setupDescriptorPool()
     {
         vks::initializers::descriptorPoolSize(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 2),
         vks::initializers::descriptorPoolSize(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1),
-        vks::initializers::descriptorPoolSize(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 2)
+        vks::initializers::descriptorPoolSize(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 12)
     };
 
     VkDescriptorPoolCreateInfo descriptorPoolInfo =
         vks::initializers::descriptorPoolCreateInfo(
             (uint32_t)poolSizes.size(),
             poolSizes.data(),
-            2);
+            10);  // 10 descriptor sets allocated out of this pool
 
     VK_CHECK_RESULT(vkCreateDescriptorPool(device, &descriptorPoolInfo, nullptr, &descriptorPool));
 }
