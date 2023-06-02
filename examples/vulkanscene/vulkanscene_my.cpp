@@ -354,6 +354,74 @@ void VulkanExample::buildComputeCommandBuffers(uint32_t buildMask)
     }
 }
 
+void VulkanExample::addDraw(VkCommandBuffer cmdBuffer, bool changeVtxOffsetEveryDraw)
+{
+    VkDeviceSize offset = changeVtxOffsetEveryDraw ? (rand() % 1024) * sizeof(Vertex) : 0;
+    VkPipeline pipelineList[] = {
+        graphicsPipeline1,
+        graphicsPipeline2,
+        graphicsPipeline3,
+        graphicsPipeline4,
+        graphicsPipeline5,
+    };
+    int randPipeline = rand() % 5;
+    vkCmdBindPipeline(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineList[randPipeline]);
+    vkCmdBindVertexBuffers(cmdBuffer, 0, 1, &vertexBuffer.buffer, &offset);
+    vkCmdDraw(cmdBuffer, NUM_MAX_VERTICES - 1024, 1, 0, 0);
+}
+
+void VulkanExample::buildGraphicsCommandBuffers(uint32_t buildMask)
+{
+    VkCommandBufferBeginInfo cmdBufInfo = vks::initializers::commandBufferBeginInfo();
+
+    VkClearValue clearValues[2];
+    clearValues[0].color = defaultClearColor;
+    clearValues[1].depthStencil = { 1.0f, 0 };
+
+    VkRenderPassBeginInfo renderPassBeginInfo = vks::initializers::renderPassBeginInfo();
+    renderPassBeginInfo.renderPass = renderPass;
+    renderPassBeginInfo.renderArea.offset.x = 0;
+    renderPassBeginInfo.renderArea.offset.y = 0;
+    renderPassBeginInfo.renderArea.extent.width = width;
+    renderPassBeginInfo.renderArea.extent.height = height;
+    renderPassBeginInfo.clearValueCount = 2;
+    renderPassBeginInfo.pClearValues = clearValues;
+
+    for (int32_t i = 0; i < drawCmdBuffers.size(); ++i)
+    {
+        if (((1 << i) & buildMask) == 0) {
+            continue;
+        }
+        renderPassBeginInfo.framebuffer = frameBuffers[i];
+
+        VK_CHECK_RESULT(vkBeginCommandBuffer(drawCmdBuffers[i], &cmdBufInfo));
+
+        // Copy identifier
+        int pData[] = { 0x657921, 0x1003 };
+        vkCmdUpdateBuffer(drawCmdBuffers[i], sboBuffers.buffer1.buffer, 0, sizeof(uint32_t) * 2, pData);
+
+        vkCmdBeginRenderPass(drawCmdBuffers[i], &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
+
+        VkViewport viewport = vks::initializers::viewport((float)width, (float)height, 0.0f, 1.0f);
+        vkCmdSetViewport(drawCmdBuffers[i], 0, 1, &viewport);
+
+        VkRect2D scissor = vks::initializers::rect2D(width, height, 0, 0);
+        vkCmdSetScissor(drawCmdBuffers[i], 0, 1, &scissor);
+
+        vkCmdBindDescriptorSets(drawCmdBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, &descriptorSet, 0, NULL);
+
+        // add draws
+        {
+            addDraw(drawCmdBuffers[i], false/*changeVtxOffsetEveryDraw*/);
+            addDraw(drawCmdBuffers[i], true/*changeVtxOffsetEveryDraw*/);
+        }
+
+        vkCmdEndRenderPass(drawCmdBuffers[i]);
+
+        VK_CHECK_RESULT(vkEndCommandBuffer(drawCmdBuffers[i]));
+    }
+}
+
 void VulkanExample::destroyCommandBuffers()
 {
     vkFreeCommandBuffers(device, copyCommandPool, static_cast<uint32_t>(copyCmdBuffers.size()), copyCmdBuffers.data());
@@ -380,15 +448,17 @@ void VulkanExample::prepare()
 
     buildOneTimeSubmitCommandBuffers();
 
-    buildDefaultCommandBuffers();
+    buildGraphicsCommandBuffers(7); // build all 3 command buffers the first time
     buildTransferCommandBuffers(7); // build all 3 command buffers the first time
-    buildComputeCommandBuffers(7); // build all 3 command buffers the first time
+    buildComputeCommandBuffers(7);  // build all 3 command buffers the first time
 
     prepared = true;
 }
 
 void VulkanExample::draw()
 {
+    buildGraphicsCommandBuffers(1 << currentBuffer);
+
     buildTransferCommandBuffers(1 << currentBuffer);
     
     buildComputeCommandBuffers(1 << currentBuffer);

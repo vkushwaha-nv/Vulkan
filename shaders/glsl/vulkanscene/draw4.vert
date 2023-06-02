@@ -18,7 +18,7 @@ layout (location = 0) out vec3 outColor;
 void main() 
 {
     mat4 modelView = ubo.view * ubo.model;
-    vec4 pos = modelView * inPos;
-    outColor = inColor;
+    vec4 pos = modelView * inPos + vec4(0.12, 0.03, 0.04, 0.1);
+    outColor = inColor + vec3(0.402, 0.0113, 0.104);
     gl_Position = ubo.projection * pos;
 }

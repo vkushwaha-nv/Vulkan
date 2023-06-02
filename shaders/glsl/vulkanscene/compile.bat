@@ -3,5 +3,13 @@ glslangValidator.exe -V D:\gitrepos\samples_my\Vulkan\shaders\glsl\vulkanscene\c
 glslangValidator.exe -V D:\gitrepos\samples_my\Vulkan\shaders\glsl\vulkanscene\compute3.comp -o D:\gitrepos\samples_my\Vulkan\shaders\glsl\vulkanscene\compute3.spv
 glslangValidator.exe -V D:\gitrepos\samples_my\Vulkan\shaders\glsl\vulkanscene\compute4.comp -o D:\gitrepos\samples_my\Vulkan\shaders\glsl\vulkanscene\compute4.spv
 glslangValidator.exe -V D:\gitrepos\samples_my\Vulkan\shaders\glsl\vulkanscene\compute5.comp -o D:\gitrepos\samples_my\Vulkan\shaders\glsl\vulkanscene\compute5.spv
-glslangValidator.exe -V D:\gitrepos\samples_my\Vulkan\shaders\glsl\vulkanscene\simpleDraw.vert -o D:\gitrepos\samples_my\Vulkan\shaders\glsl\vulkanscene\simpleDraw.vert.spv
-glslangValidator.exe -V D:\gitrepos\samples_my\Vulkan\shaders\glsl\vulkanscene\simpleDraw.frag -o D:\gitrepos\samples_my\Vulkan\shaders\glsl\vulkanscene\simpleDraw.frag.spv
+glslangValidator.exe -V D:\gitrepos\samples_my\Vulkan\shaders\glsl\vulkanscene\draw1.vert -o D:\gitrepos\samples_my\Vulkan\shaders\glsl\vulkanscene\draw1.vert.spv
+glslangValidator.exe -V D:\gitrepos\samples_my\Vulkan\shaders\glsl\vulkanscene\draw1.frag -o D:\gitrepos\samples_my\Vulkan\shaders\glsl\vulkanscene\draw1.frag.spv
+glslangValidator.exe -V D:\gitrepos\samples_my\Vulkan\shaders\glsl\vulkanscene\draw2.vert -o D:\gitrepos\samples_my\Vulkan\shaders\glsl\vulkanscene\draw2.vert.spv
+glslangValidator.exe -V D:\gitrepos\samples_my\Vulkan\shaders\glsl\vulkanscene\draw2.frag -o D:\gitrepos\samples_my\Vulkan\shaders\glsl\vulkanscene\draw2.frag.spv
+glslangValidator.exe -V D:\gitrepos\samples_my\Vulkan\shaders\glsl\vulkanscene\draw3.vert -o D:\gitrepos\samples_my\Vulkan\shaders\glsl\vulkanscene\draw3.vert.spv
+glslangValidator.exe -V D:\gitrepos\samples_my\Vulkan\shaders\glsl\vulkanscene\draw3.frag -o D:\gitrepos\samples_my\Vulkan\shaders\glsl\vulkanscene\draw3.frag.spv
+glslangValidator.exe -V D:\gitrepos\samples_my\Vulkan\shaders\glsl\vulkanscene\draw4.vert -o D:\gitrepos\samples_my\Vulkan\shaders\glsl\vulkanscene\draw4.vert.spv
+glslangValidator.exe -V D:\gitrepos\samples_my\Vulkan\shaders\glsl\vulkanscene\draw4.frag -o D:\gitrepos\samples_my\Vulkan\shaders\glsl\vulkanscene\draw4.frag.spv
+glslangValidator.exe -V D:\gitrepos\samples_my\Vulkan\shaders\glsl\vulkanscene\draw5.vert -o D:\gitrepos\samples_my\Vulkan\shaders\glsl\vulkanscene\draw5.vert.spv
+glslangValidator.exe -V D:\gitrepos\samples_my\Vulkan\shaders\glsl\vulkanscene\draw5.frag -o D:\gitrepos\samples_my\Vulkan\shaders\glsl\vulkanscene\draw5.frag.spv

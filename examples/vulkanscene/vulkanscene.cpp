@@ -39,6 +39,10 @@ VulkanExample::~VulkanExample()
 
     //destroy graphics pipeline
     vkDestroyPipeline(device, graphicsPipeline1, nullptr);
+    vkDestroyPipeline(device, graphicsPipeline2, nullptr);
+    vkDestroyPipeline(device, graphicsPipeline3, nullptr);
+    vkDestroyPipeline(device, graphicsPipeline4, nullptr);
+    vkDestroyPipeline(device, graphicsPipeline5, nullptr);
     vkDestroyPipelineLayout(device, pipelineLayout, nullptr);
     vkDestroyDescriptorSetLayout(device, descriptorSetLayout, nullptr);
 
@@ -69,53 +73,6 @@ void VulkanExample::loadAssets()
     textureList.tex3.loadFromFile(getAssetPath() + "textures/stonefloor01_color_rgba.ktx", VK_FORMAT_R8G8B8A8_UNORM, vulkanDevice, queue, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT, VK_IMAGE_LAYOUT_GENERAL);
     textureList.tex4.loadFromFile(getAssetPath() + "textures/stonefloor02_normal_rgba.ktx", VK_FORMAT_R8G8B8A8_UNORM, vulkanDevice, queue, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT, VK_IMAGE_LAYOUT_GENERAL);
 
-}
-
-void VulkanExample::buildDefaultCommandBuffers()
-{
-    VkCommandBufferBeginInfo cmdBufInfo = vks::initializers::commandBufferBeginInfo();
-
-    VkClearValue clearValues[2];
-    clearValues[0].color = defaultClearColor;
-    clearValues[1].depthStencil = { 1.0f, 0 };
-
-    VkRenderPassBeginInfo renderPassBeginInfo = vks::initializers::renderPassBeginInfo();
-    renderPassBeginInfo.renderPass = renderPass;
-    renderPassBeginInfo.renderArea.offset.x = 0;
-    renderPassBeginInfo.renderArea.offset.y = 0;
-    renderPassBeginInfo.renderArea.extent.width = width;
-    renderPassBeginInfo.renderArea.extent.height = height;
-    renderPassBeginInfo.clearValueCount = 2;
-    renderPassBeginInfo.pClearValues = clearValues;
-
-    for (int32_t i = 0; i < drawCmdBuffers.size(); ++i)
-    {
-        renderPassBeginInfo.framebuffer = frameBuffers[i];
-
-        VK_CHECK_RESULT(vkBeginCommandBuffer(drawCmdBuffers[i], &cmdBufInfo));
-
-        vkCmdBeginRenderPass(drawCmdBuffers[i], &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
-
-        VkViewport viewport = vks::initializers::viewport((float)width, (float)height, 0.0f, 1.0f);
-        vkCmdSetViewport(drawCmdBuffers[i], 0, 1, &viewport);
-
-        VkRect2D scissor = vks::initializers::rect2D(width, height, 0, 0);
-        vkCmdSetScissor(drawCmdBuffers[i], 0, 1, &scissor);
-
-        vkCmdBindDescriptorSets(drawCmdBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, &descriptorSet, 0, NULL);
-
-        {
-            //existing descriptor set should work
-            VkDeviceSize offset = 0;
-            vkCmdBindPipeline(drawCmdBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline1);
-            vkCmdBindVertexBuffers(drawCmdBuffers[i], 0, 1, &vertexBuffer.buffer, &offset);
-            vkCmdDraw(drawCmdBuffers[i], NUM_MAX_VERTICES, 1, 0, 0);
-        }
-
-        vkCmdEndRenderPass(drawCmdBuffers[i]);
-
-        VK_CHECK_RESULT(vkEndCommandBuffer(drawCmdBuffers[i]));
-    }
 }
 
 void VulkanExample::setupDescriptorPool()
@@ -216,8 +173,8 @@ void VulkanExample::preparePipelines()
     pipelineCI.pStages = shaderStages.data();
     pipelineCI.pVertexInputState = vkglTF::Vertex::getPipelineVertexInputState({ vkglTF::VertexComponent::Position, vkglTF::VertexComponent::Normal, vkglTF::VertexComponent::UV, vkglTF::VertexComponent::Color });;
 
-    shaderStages[0] = loadShader(getShadersPath() + "vulkanscene/simpleDraw.vert.spv", VK_SHADER_STAGE_VERTEX_BIT);
-    shaderStages[1] = loadShader(getShadersPath() + "vulkanscene/simpleDraw.frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT);
+    shaderStages[0] = loadShader(getShadersPath() + "vulkanscene/draw1.vert.spv", VK_SHADER_STAGE_VERTEX_BIT);
+    shaderStages[1] = loadShader(getShadersPath() + "vulkanscene/draw1.frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT);
 
     VkVertexInputBindingDescription vertexInputBinding = {};
     vertexInputBinding.binding = 0;
@@ -249,6 +206,22 @@ void VulkanExample::preparePipelines()
 
     pipelineCI.pVertexInputState = &vertexInputState;
     VK_CHECK_RESULT(vkCreateGraphicsPipelines(device, pipelineCache, 1, &pipelineCI, nullptr, &graphicsPipeline1));
+
+    shaderStages[0] = loadShader(getShadersPath() + "vulkanscene/draw2.vert.spv", VK_SHADER_STAGE_VERTEX_BIT);
+    shaderStages[1] = loadShader(getShadersPath() + "vulkanscene/draw2.frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT);
+    VK_CHECK_RESULT(vkCreateGraphicsPipelines(device, pipelineCache, 1, &pipelineCI, nullptr, &graphicsPipeline2));
+
+    shaderStages[0] = loadShader(getShadersPath() + "vulkanscene/draw3.vert.spv", VK_SHADER_STAGE_VERTEX_BIT);
+    shaderStages[1] = loadShader(getShadersPath() + "vulkanscene/draw3.frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT);
+    VK_CHECK_RESULT(vkCreateGraphicsPipelines(device, pipelineCache, 1, &pipelineCI, nullptr, &graphicsPipeline3));
+
+    shaderStages[0] = loadShader(getShadersPath() + "vulkanscene/draw4.vert.spv", VK_SHADER_STAGE_VERTEX_BIT);
+    shaderStages[1] = loadShader(getShadersPath() + "vulkanscene/draw4.frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT);
+    VK_CHECK_RESULT(vkCreateGraphicsPipelines(device, pipelineCache, 1, &pipelineCI, nullptr, &graphicsPipeline4));
+
+    shaderStages[0] = loadShader(getShadersPath() + "vulkanscene/draw5.vert.spv", VK_SHADER_STAGE_VERTEX_BIT);
+    shaderStages[1] = loadShader(getShadersPath() + "vulkanscene/draw5.frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT);
+    VK_CHECK_RESULT(vkCreateGraphicsPipelines(device, pipelineCache, 1, &pipelineCI, nullptr, &graphicsPipeline5));
 }
 
 // Prepare and initialize uniform buffer containing shader uniforms

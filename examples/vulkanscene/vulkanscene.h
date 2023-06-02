@@ -66,6 +66,10 @@ public:
     VkDescriptorSet descriptorSet;
     VkDescriptorSetLayout descriptorSetLayout;
     VkPipeline graphicsPipeline1;
+    VkPipeline graphicsPipeline2;
+    VkPipeline graphicsPipeline3;
+    VkPipeline graphicsPipeline4;
+    VkPipeline graphicsPipeline5;
 
     glm::vec4 lightPos = glm::vec4(1.0f, 4.0f, 0.0f, 0.0f);
 
@@ -112,8 +116,6 @@ public:
     ~VulkanExample();
     
     void loadAssets();
-    void buildDefaultCommandBuffers();
-    
     void setupDescriptorPool();
     void setupDescriptorSetLayout();
     void setupDescriptorSet();
@@ -127,8 +129,10 @@ public:
     void createBuffers();
     void createCommandPoolAndBuffers();
     void buildOneTimeSubmitCommandBuffers();
+    void buildGraphicsCommandBuffers(uint32_t buildMask);
     void buildTransferCommandBuffers(uint32_t buildMask);
     void addCopyCommands(VkCommandBuffer cmdBuffer, uint32_t copyCount, VkDeviceSize copySize);
+    void addDraw(VkCommandBuffer cmdBuffer, bool changeVtxOffsetEveryDraw);
     void addDispatch(VkCommandBuffer cmdBuffer, uint32_t size_x, uint32_t size_y, uint32_t size_z, uint32_t complexity);
     void buildComputeCommandBuffers(uint32_t buildMask);
     void destroyCommandBuffers();
