@@ -2,6 +2,10 @@
 
 #define MAX_DRAW_FRAMES 0 // 0 = INF
 #define SBO_BUFFER_MAX_SIZE (512 * 1024 * 1024ULL)
+
+#define NUM_MAX_VERTICES (512 * 1024ULL)
+#define NUM_MAX_VERTICES_FILL_SIZE (1024ULL) // must be a multiple of NUM_MAX_VERTICES
+
 #define SWAP_CHAIN_IMAGE_COUNT  3
 
 #define NUM_DESCRIPTOR_SETS     5
@@ -19,15 +23,8 @@ static unsigned currentFrameCounter = 0;
 class VulkanExample : public VulkanExampleBase
 {
 public:
-    struct DemoModel
-    {
-        vkglTF::Model* glTF;
-        VkPipeline *pipeline;
-    };
-    std::vector<DemoModel> demoModels;
-
     struct {
-        vks::Buffer meshVS;
+        vks::Buffer uboMVPBuffer;
     } uniformData;
 
     struct {
@@ -37,17 +34,6 @@ public:
         glm::mat4 view;
         glm::vec4 lightPos;
     } uboVS;
-
-    struct
-    {
-        vks::TextureCubeMap skybox;
-    } textures;
-
-    struct {
-        VkPipeline logos;
-        VkPipeline models;
-        VkPipeline skybox;
-    } pipelines;
 
     struct {
         uint32_t srcOffset;
@@ -59,6 +45,7 @@ public:
         float temp4;
     } computePushConstantData;
 
+    // Compute pipeline
     struct {
         VkPipelineLayout pipelineLayout;
         VkDescriptorSetLayout descriptorSetLayout;
@@ -74,14 +61,15 @@ public:
         VkPipeline pipeline5;
     } computePipelines;
 
+    // Graphics pipeline
     VkPipelineLayout pipelineLayout;
     VkDescriptorSet descriptorSet;
     VkDescriptorSetLayout descriptorSetLayout;
+    VkPipeline graphicsPipeline1;
 
     glm::vec4 lightPos = glm::vec4(1.0f, 4.0f, 0.0f, 0.0f);
 
-    // ----VKKK------------------------------------------------------
-    // 5 random buffers
+    // 5 SBO buffers
     struct {
         vks::Buffer buffer1;
         vks::Buffer buffer2;
@@ -96,6 +84,14 @@ public:
         vks::Texture2D tex3;
         vks::Texture2D tex4;
     } textureList;
+
+
+    struct Vertex {
+	    float position[4];
+	    float color[3];
+    };
+    vks::Buffer vertexBuffer;
+
 
     // Graphics command pool
     VkCommandPool graphicsCommandPool;

@@ -28,14 +28,6 @@ VulkanExample::VulkanExample() : VulkanExampleBase(ENABLE_VALIDATION)
 
 VulkanExample::~VulkanExample()
 {
-    // Clean up used Vulkan resources
-    vkDestroyPipeline(device, pipelines.logos, nullptr);
-    vkDestroyPipeline(device, pipelines.models, nullptr);
-    vkDestroyPipeline(device, pipelines.skybox, nullptr);
-
-    vkDestroyPipelineLayout(device, pipelineLayout, nullptr);
-    vkDestroyDescriptorSetLayout(device, descriptorSetLayout, nullptr);
-
     //destroy compute pipeline stuff
     vkDestroyPipeline(device, computePipelines.pipeline1, nullptr);
     vkDestroyPipeline(device, computePipelines.pipeline2, nullptr);
@@ -45,12 +37,10 @@ VulkanExample::~VulkanExample()
     vkDestroyPipelineLayout(device, computePipelines.pipelineLayout, nullptr);
     vkDestroyDescriptorSetLayout(device, computePipelines.descriptorSetLayout, nullptr);
 
-
-    for (auto demoModel : demoModels) {
-        delete demoModel.glTF;
-    }
-
-    uniformData.meshVS.destroy();
+    //destroy graphics pipeline
+    vkDestroyPipeline(device, graphicsPipeline1, nullptr);
+    vkDestroyPipelineLayout(device, pipelineLayout, nullptr);
+    vkDestroyDescriptorSetLayout(device, descriptorSetLayout, nullptr);
 
     sboBuffers.buffer1.destroy();
     sboBuffers.buffer2.destroy();
@@ -58,12 +48,13 @@ VulkanExample::~VulkanExample()
     sboBuffers.buffer4.destroy();
     sboBuffers.buffer5.destroy();
 
+    vertexBuffer.destroy();
+
     textureList.tex1.destroy();
     textureList.tex2.destroy();
     textureList.tex3.destroy();
     textureList.tex4.destroy();
 
-    textures.skybox.destroy();
     destroyCommandBuffers();
     vkDestroyCommandPool(device, copyCommandPool, nullptr);
     vkDestroyCommandPool(device, graphicsCommandPool, nullptr);
@@ -72,19 +63,7 @@ VulkanExample::~VulkanExample()
 
 void VulkanExample::loadAssets()
 {
-    // Models
-    std::vector<std::string> modelFiles = { "vulkanscenelogos.gltf", "vulkanscenebackground.gltf", "vulkanscenemodels.gltf", "cube.gltf" };
-    std::vector<VkPipeline*> modelPipelines = { &pipelines.logos, &pipelines.models, &pipelines.models, &pipelines.skybox };
-    for (auto i = 0; i < modelFiles.size(); i++) {
-        DemoModel model;
-        const uint32_t glTFLoadingFlags = vkglTF::FileLoadingFlags::PreTransformVertices | vkglTF::FileLoadingFlags::PreMultiplyVertexColors | vkglTF::FileLoadingFlags::FlipY;
-        model.pipeline = modelPipelines[i];
-        model.glTF = new vkglTF::Model();
-        model.glTF->loadFromFile(getAssetPath() + "models/" + modelFiles[i], vulkanDevice, queue, glTFLoadingFlags);
-        demoModels.push_back(model);
-    }
     // Textures
-    textures.skybox.loadFromFile(getAssetPath() + "textures/cubemap_vulkan.ktx", VK_FORMAT_R8G8B8A8_UNORM, vulkanDevice, queue);
     textureList.tex1.loadFromFile(getAssetPath() + "textures/vulkan_11_rgba.ktx", VK_FORMAT_R8G8B8A8_UNORM, vulkanDevice, queue, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT, VK_IMAGE_LAYOUT_GENERAL);
     textureList.tex2.loadFromFile(getAssetPath() + "textures/vulkan_cloth_rgba.ktx", VK_FORMAT_R8G8B8A8_UNORM, vulkanDevice, queue, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT, VK_IMAGE_LAYOUT_GENERAL);
     textureList.tex3.loadFromFile(getAssetPath() + "textures/stonefloor01_color_rgba.ktx", VK_FORMAT_R8G8B8A8_UNORM, vulkanDevice, queue, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT, VK_IMAGE_LAYOUT_GENERAL);
@@ -125,12 +104,13 @@ void VulkanExample::buildDefaultCommandBuffers()
 
         vkCmdBindDescriptorSets(drawCmdBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, &descriptorSet, 0, NULL);
 
-        for (auto model : demoModels) {
-            vkCmdBindPipeline(drawCmdBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, *model.pipeline);
-            model.glTF->draw(drawCmdBuffers[i]);
+        {
+            //existing descriptor set should work
+            VkDeviceSize offset = 0;
+            vkCmdBindPipeline(drawCmdBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline1);
+            vkCmdBindVertexBuffers(drawCmdBuffers[i], 0, 1, &vertexBuffer.buffer, &offset);
+            vkCmdDraw(drawCmdBuffers[i], NUM_MAX_VERTICES, 1, 0, 0);
         }
-
-        drawUI(drawCmdBuffers[i]);
 
         vkCmdEndRenderPass(drawCmdBuffers[i]);
 
@@ -199,13 +179,6 @@ void VulkanExample::setupDescriptorSet()
 
     VK_CHECK_RESULT(vkAllocateDescriptorSets(device, &allocInfo, &descriptorSet));
 
-    // Cube map image descriptor
-    VkDescriptorImageInfo texDescriptorCubeMap =
-        vks::initializers::descriptorImageInfo(
-            textures.skybox.sampler,
-            textures.skybox.view,
-            VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-
     std::vector<VkWriteDescriptorSet> writeDescriptorSets =
     {
         // Binding 0 : Vertex shader uniform buffer
@@ -213,13 +186,7 @@ void VulkanExample::setupDescriptorSet()
             descriptorSet,
             VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
             0,
-            &uniformData.meshVS.descriptor),
-        // Binding 1 : Fragment shader image sampler
-        vks::initializers::writeDescriptorSet(
-            descriptorSet,
-            VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-            1,
-            &texDescriptorCubeMap)
+            &uniformData.uboMVPBuffer.descriptor)
     };
 
     vkUpdateDescriptorSets(device, (uint32_t)writeDescriptorSets.size(), writeDescriptorSets.data(), 0, NULL);
@@ -249,22 +216,39 @@ void VulkanExample::preparePipelines()
     pipelineCI.pStages = shaderStages.data();
     pipelineCI.pVertexInputState = vkglTF::Vertex::getPipelineVertexInputState({ vkglTF::VertexComponent::Position, vkglTF::VertexComponent::Normal, vkglTF::VertexComponent::UV, vkglTF::VertexComponent::Color });;
 
-    // Default mesh rendering pipeline
-    shaderStages[0] = loadShader(getShadersPath() + "vulkanscene/mesh.vert.spv", VK_SHADER_STAGE_VERTEX_BIT);
-    shaderStages[1] = loadShader(getShadersPath() + "vulkanscene/mesh.frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT);
-    VK_CHECK_RESULT(vkCreateGraphicsPipelines(device, pipelineCache, 1, &pipelineCI, nullptr, &pipelines.models));
+    shaderStages[0] = loadShader(getShadersPath() + "vulkanscene/simpleDraw.vert.spv", VK_SHADER_STAGE_VERTEX_BIT);
+    shaderStages[1] = loadShader(getShadersPath() + "vulkanscene/simpleDraw.frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT);
 
-    // Pipeline for the logos
-    shaderStages[0] = loadShader(getShadersPath() + "vulkanscene/logo.vert.spv", VK_SHADER_STAGE_VERTEX_BIT);
-    shaderStages[1] = loadShader(getShadersPath() + "vulkanscene/logo.frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT);
-    VK_CHECK_RESULT(vkCreateGraphicsPipelines(device, pipelineCache, 1, &pipelineCI, nullptr, &pipelines.logos));
+    VkVertexInputBindingDescription vertexInputBinding = {};
+    vertexInputBinding.binding = 0;
+    vertexInputBinding.stride = sizeof(Vertex);
+    vertexInputBinding.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
 
-    // Pipeline for the sky sphere
-    rasterizationState.cullMode = VK_CULL_MODE_FRONT_BIT;
-    depthStencilState.depthWriteEnable = VK_FALSE;
-    shaderStages[0] = loadShader(getShadersPath() + "vulkanscene/skybox.vert.spv", VK_SHADER_STAGE_VERTEX_BIT);
-    shaderStages[1] = loadShader(getShadersPath() + "vulkanscene/skybox.frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT);
-    VK_CHECK_RESULT(vkCreateGraphicsPipelines(device, pipelineCache, 1, &pipelineCI, nullptr, &pipelines.skybox));
+    std::array<VkVertexInputAttributeDescription, 2> vertexInputAttributs;
+    //	layout (location = 0) in vec4 inPos;
+    //	layout (location = 1) in vec3 inColor;
+    // Attribute location 0: Position
+    vertexInputAttributs[0].binding = 0;
+    vertexInputAttributs[0].location = 0;
+    // Position attribute is three 32 bit signed (SFLOAT) floats (R32 G32 B32)
+    vertexInputAttributs[0].format = VK_FORMAT_R32G32B32A32_SFLOAT;
+    vertexInputAttributs[0].offset = offsetof(Vertex, position);
+    // Attribute location 1: Color
+    vertexInputAttributs[1].binding = 0;
+    vertexInputAttributs[1].location = 1;
+    // Color attribute is three 32 bit signed (SFLOAT) floats (R32 G32 B32)
+    vertexInputAttributs[1].format = VK_FORMAT_R32G32B32_SFLOAT;
+    vertexInputAttributs[1].offset = offsetof(Vertex, color);
+
+    VkPipelineVertexInputStateCreateInfo vertexInputState = {};
+    vertexInputState.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+    vertexInputState.vertexBindingDescriptionCount = 1;
+    vertexInputState.pVertexBindingDescriptions = &vertexInputBinding;
+    vertexInputState.vertexAttributeDescriptionCount = 2;
+    vertexInputState.pVertexAttributeDescriptions = vertexInputAttributs.data();
+
+    pipelineCI.pVertexInputState = &vertexInputState;
+    VK_CHECK_RESULT(vkCreateGraphicsPipelines(device, pipelineCache, 1, &pipelineCI, nullptr, &graphicsPipeline1));
 }
 
 // Prepare and initialize uniform buffer containing shader uniforms
@@ -273,9 +257,9 @@ void VulkanExample::prepareUniformBuffers()
     vulkanDevice->createBuffer(
         VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
         VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-        &uniformData.meshVS,
+        &uniformData.uboMVPBuffer,
         sizeof(uboVS));
-    VK_CHECK_RESULT(uniformData.meshVS.map());
+    VK_CHECK_RESULT(uniformData.uboMVPBuffer.map());
     updateUniformBuffers();
 }
 
@@ -286,7 +270,7 @@ void VulkanExample::updateUniformBuffers()
     uboVS.model = glm::mat4(1.0f);
     uboVS.normal = glm::inverseTranspose(uboVS.view * uboVS.model);
     uboVS.lightPos = lightPos;
-    memcpy(uniformData.meshVS.mapped, &uboVS, sizeof(uboVS));
+    memcpy(uniformData.uboMVPBuffer.mapped, &uboVS, sizeof(uboVS));
 }
 
 void VulkanExample::render()

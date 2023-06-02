@@ -16,13 +16,16 @@
 
 void VulkanExample::createBuffers()
 {
-    // Create 5 SBO buffers on device
-    uint32_t usageFlags = (VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT);
-    VK_CHECK_RESULT(vulkanDevice->createBuffer(usageFlags, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &sboBuffers.buffer1, SBO_BUFFER_MAX_SIZE));
-    VK_CHECK_RESULT(vulkanDevice->createBuffer(usageFlags, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &sboBuffers.buffer2, SBO_BUFFER_MAX_SIZE));
-    VK_CHECK_RESULT(vulkanDevice->createBuffer(usageFlags, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &sboBuffers.buffer3, SBO_BUFFER_MAX_SIZE));
-    VK_CHECK_RESULT(vulkanDevice->createBuffer(usageFlags, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &sboBuffers.buffer4, SBO_BUFFER_MAX_SIZE));
-    VK_CHECK_RESULT(vulkanDevice->createBuffer(usageFlags, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &sboBuffers.buffer5, SBO_BUFFER_MAX_SIZE));
+    uint32_t sboUsageFlags = (VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT);
+    uint32_t vboUsageFlags = (VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | sboUsageFlags);
+
+    VK_CHECK_RESULT(vulkanDevice->createBuffer(sboUsageFlags, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &sboBuffers.buffer1, SBO_BUFFER_MAX_SIZE));
+    VK_CHECK_RESULT(vulkanDevice->createBuffer(sboUsageFlags, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &sboBuffers.buffer2, SBO_BUFFER_MAX_SIZE));
+    VK_CHECK_RESULT(vulkanDevice->createBuffer(sboUsageFlags, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &sboBuffers.buffer3, SBO_BUFFER_MAX_SIZE));
+    VK_CHECK_RESULT(vulkanDevice->createBuffer(sboUsageFlags, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &sboBuffers.buffer4, SBO_BUFFER_MAX_SIZE));
+    VK_CHECK_RESULT(vulkanDevice->createBuffer(sboUsageFlags, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &sboBuffers.buffer5, SBO_BUFFER_MAX_SIZE));
+
+    VK_CHECK_RESULT(vulkanDevice->createBuffer(vboUsageFlags, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &vertexBuffer, sizeof(Vertex) * NUM_MAX_VERTICES));
 }
 
 void VulkanExample::prepareCompute()
@@ -190,6 +193,40 @@ void VulkanExample::buildOneTimeSubmitCommandBuffers()
     vkCmdFillBuffer(oneTimeSubmitCmdBuffer, sboBuffers.buffer4.buffer, 0, SBO_BUFFER_MAX_SIZE, 0x44444444);
     vkCmdFillBuffer(oneTimeSubmitCmdBuffer, sboBuffers.buffer5.buffer, 0, SBO_BUFFER_MAX_SIZE, 0x55555555);
 
+    // fill vertex buffer
+    {
+        std::vector<Vertex> vertexData;
+        vertexData.resize(NUM_MAX_VERTICES);
+        for (size_t i = 0; i < NUM_MAX_VERTICES; i++) {
+            int randValueX = rand() % 1024;
+            int randValueY = rand() % 1024;
+            int randValueZ = rand() % 1024;
+            int randValueW = rand() % 1024;
+            int randValueR = rand() % 1024;
+            int randValueG = rand() % 1024;
+            int randValueB = rand() % 1024;
+            vertexData[i].position[0] = randValueX / 1024.0f;
+            vertexData[i].position[1] = randValueY / 1024.0f;
+            vertexData[i].position[2] = randValueZ / 1024.0f;
+            vertexData[i].position[3] = randValueW / 1024.0f;
+            vertexData[i].color[0] = randValueR / 1024.0f;
+            vertexData[i].color[1] = randValueG / 1024.0f;
+            vertexData[i].color[2] = randValueB / 1024.0f;
+        }
+        size_t chunkSize = NUM_MAX_VERTICES_FILL_SIZE * sizeof(Vertex);
+        assert(chunkSize < 32768); // there is a limit on size in vkCmdUpdateBuffer
+        size_t filledSize = 0;
+        size_t numLoops = NUM_MAX_VERTICES / NUM_MAX_VERTICES_FILL_SIZE;
+        int t = 0;
+        while (numLoops > 0) {
+            int offset = t * NUM_MAX_VERTICES_FILL_SIZE;
+            vkCmdUpdateBuffer(oneTimeSubmitCmdBuffer, vertexBuffer.buffer, filledSize, chunkSize, &vertexData[offset]);
+            filledSize += chunkSize;
+            numLoops--;
+            t++;
+        }
+
+    }
     VK_CHECK_RESULT(vkEndCommandBuffer(oneTimeSubmitCmdBuffer));
 }
 
@@ -288,7 +325,7 @@ void VulkanExample::buildTransferCommandBuffers(uint32_t buildMask)
         int pData[] = { 0x657921, 0x1001 };
         vkCmdUpdateBuffer(copyCmdBuffers[i], sboBuffers.buffer1.buffer, 0, sizeof(uint32_t) * 2, pData);
 
-        addCopyCommands(copyCmdBuffers[i], 4 /* num copies */, SBO_BUFFER_MAX_SIZE/(1024 * 1024));
+        addCopyCommands(copyCmdBuffers[i], 2 /* num copies */, SBO_BUFFER_MAX_SIZE/(1024 * 1024));
 
         VK_CHECK_RESULT(vkEndCommandBuffer(copyCmdBuffers[i]));
     }
@@ -310,11 +347,8 @@ void VulkanExample::buildComputeCommandBuffers(uint32_t buildMask)
 
         addCopyCommands(computeCmdBuffers[i], 1 /* num copies */, SBO_BUFFER_MAX_SIZE/(1024 * 1024));
 
-        addDispatch(computeCmdBuffers[i], 102400, 10, 10,     COMPLEXITY_LEVEL_1);
-        addDispatch(computeCmdBuffers[i], 102400, 10, 10,     COMPLEXITY_LEVEL_2);
-        addDispatch(computeCmdBuffers[i], 102400, 10, 10,     COMPLEXITY_LEVEL_3);
-        addDispatch(computeCmdBuffers[i], 102400, 10, 10,     COMPLEXITY_LEVEL_4);
-        addDispatch(computeCmdBuffers[i], 102400, 10, 10,     COMPLEXITY_LEVEL_5);
+        addDispatch(computeCmdBuffers[i], 10, 10, 10,     COMPLEXITY_LEVEL_1);
+        addDispatch(computeCmdBuffers[i], 10, 10, 10,     COMPLEXITY_LEVEL_5);
 
         VK_CHECK_RESULT(vkEndCommandBuffer(computeCmdBuffers[i]));
     }
@@ -338,7 +372,6 @@ void VulkanExample::prepare()
     preparePipelines();
     setupDescriptorPool();
     setupDescriptorSet();
-    buildDefaultCommandBuffers();
 
     //----------------VKKK--------------------------
     createBuffers();
@@ -346,6 +379,8 @@ void VulkanExample::prepare()
     createCommandPoolAndBuffers();
 
     buildOneTimeSubmitCommandBuffers();
+
+    buildDefaultCommandBuffers();
     buildTransferCommandBuffers(7); // build all 3 command buffers the first time
     buildComputeCommandBuffers(7); // build all 3 command buffers the first time
 
