@@ -90,6 +90,13 @@ public:
         vks::Buffer buffer5;
     } sboBuffers;
 
+    struct {
+        vks::Texture2D tex1;
+        vks::Texture2D tex2;
+        vks::Texture2D tex3;
+        vks::Texture2D tex4;
+    } textureList;
+
     // Graphics command pool
     VkCommandPool graphicsCommandPool;
     std::vector<VkCommandBuffer> graphicsCmdBuffers;

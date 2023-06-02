@@ -3,4 +3,3 @@ glslangValidator.exe -V D:\gitrepos\samples_my\Vulkan\shaders\glsl\vulkanscene\c
 glslangValidator.exe -V D:\gitrepos\samples_my\Vulkan\shaders\glsl\vulkanscene\compute3.comp -o D:\gitrepos\samples_my\Vulkan\shaders\glsl\vulkanscene\compute3.spv
 glslangValidator.exe -V D:\gitrepos\samples_my\Vulkan\shaders\glsl\vulkanscene\compute4.comp -o D:\gitrepos\samples_my\Vulkan\shaders\glsl\vulkanscene\compute4.spv
 glslangValidator.exe -V D:\gitrepos\samples_my\Vulkan\shaders\glsl\vulkanscene\compute5.comp -o D:\gitrepos\samples_my\Vulkan\shaders\glsl\vulkanscene\compute5.spv
-pause

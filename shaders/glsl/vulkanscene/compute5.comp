@@ -1,7 +1,7 @@
 #version 450
 #extension GL_EXT_shader_explicit_arithmetic_types_int64 : require
 
-layout (local_size_x = 128, local_size_y = 1) in;
+layout (local_size_x = 256, local_size_y = 1) in;
 
 layout(push_constant) uniform PushConstants {
    uint srcOffset;
@@ -22,6 +22,10 @@ layout(std430, binding=1) buffer WriteData {
     uint outData[];
 };
 
+layout (binding = 2, rgba8) uniform image2D image1;
+layout (binding = 3, rgba8) uniform image2D image2;
+
+
 
 void main()
 {
@@ -33,5 +37,10 @@ void main()
         dstValue += dstValue + int(10*cos(pushConstants.temp3));
         dstValue += dstValue + int(56*sin(pushConstants.temp4));
         outData[pushConstants.dstOffset + gl_GlobalInvocationID.x] = dstValue;
+
+        uint x = gl_GlobalInvocationID.x % 1024; // tex is 1024x1024
+        uint y = gl_GlobalInvocationID.y % 1024; // tex is 1024x1024
+        vec4 res = imageLoad(image1, ivec2(x, y));
+        imageStore(image2, ivec2(x, y), res);
     }
 }

@@ -23,6 +23,10 @@ layout(std430, binding=1) buffer WriteData {
 };
 
 
+layout (binding = 2, rgba8) uniform image2D image1;
+layout (binding = 3, rgba8) uniform image2D image2;
+
+
 void main()
 {
     if (gl_GlobalInvocationID.x < pushConstants.size) {
@@ -32,5 +36,10 @@ void main()
         dstValue += dstValue + int(100*cos(pushConstants.temp2));
         dstValue += dstValue + int(56*sin(pushConstants.temp4));
         outData[pushConstants.dstOffset + gl_GlobalInvocationID.x] = dstValue;
+
+        uint x = gl_GlobalInvocationID.x % 1024; // tex is 1024x1024
+        uint y = gl_GlobalInvocationID.y % 1024; // tex is 1024x1024
+        vec4 res = imageLoad(image1, ivec2(x, y));
+        imageStore(image2, ivec2(x, y), res);
     }
 }

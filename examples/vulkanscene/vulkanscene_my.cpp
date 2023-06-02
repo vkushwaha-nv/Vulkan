@@ -33,6 +33,10 @@ void VulkanExample::prepareCompute()
         vks::initializers::descriptorSetLayoutBinding(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_COMPUTE_BIT, 0),
         // Binding 1: Output SBO
         vks::initializers::descriptorSetLayoutBinding(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_COMPUTE_BIT, 1),
+        // Binding 2: input image
+        vks::initializers::descriptorSetLayoutBinding(VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, VK_SHADER_STAGE_COMPUTE_BIT, 2),
+        // Binding 3: Output image
+        vks::initializers::descriptorSetLayoutBinding(VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, VK_SHADER_STAGE_COMPUTE_BIT, 3),
     };
 
     VkDescriptorSetLayoutCreateInfo descriptorLayout = vks::initializers::descriptorSetLayoutCreateInfo(setLayoutBindings);
@@ -61,27 +65,37 @@ void VulkanExample::prepareCompute()
     // update descriptor sets
     std::vector<VkWriteDescriptorSet> computeWriteDescriptorSets1 = {
         vks::initializers::writeDescriptorSet(computePipelines.descriptorSet1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 0, &sboBuffers.buffer1.descriptor),
-        vks::initializers::writeDescriptorSet(computePipelines.descriptorSet1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, &sboBuffers.buffer2.descriptor)
+        vks::initializers::writeDescriptorSet(computePipelines.descriptorSet1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, &sboBuffers.buffer2.descriptor),
+        vks::initializers::writeDescriptorSet(computePipelines.descriptorSet1, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 2, &textureList.tex1.descriptor),
+        vks::initializers::writeDescriptorSet(computePipelines.descriptorSet1, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 3, &textureList.tex2.descriptor)
     };
     vkUpdateDescriptorSets(device, (uint32_t)computeWriteDescriptorSets1.size(), computeWriteDescriptorSets1.data(), 0, NULL);
     std::vector<VkWriteDescriptorSet> computeWriteDescriptorSets2 = {
         vks::initializers::writeDescriptorSet(computePipelines.descriptorSet2, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 0, &sboBuffers.buffer2.descriptor),
-        vks::initializers::writeDescriptorSet(computePipelines.descriptorSet2, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, &sboBuffers.buffer3.descriptor)
+        vks::initializers::writeDescriptorSet(computePipelines.descriptorSet2, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, &sboBuffers.buffer3.descriptor),
+        vks::initializers::writeDescriptorSet(computePipelines.descriptorSet2, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 2, &textureList.tex2.descriptor),
+        vks::initializers::writeDescriptorSet(computePipelines.descriptorSet2, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 3, &textureList.tex3.descriptor)
     };
     vkUpdateDescriptorSets(device, (uint32_t)computeWriteDescriptorSets2.size(), computeWriteDescriptorSets2.data(), 0, NULL);
     std::vector<VkWriteDescriptorSet> computeWriteDescriptorSets3 = {
         vks::initializers::writeDescriptorSet(computePipelines.descriptorSet3, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 0, &sboBuffers.buffer3.descriptor),
-        vks::initializers::writeDescriptorSet(computePipelines.descriptorSet3, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, &sboBuffers.buffer4.descriptor)
+        vks::initializers::writeDescriptorSet(computePipelines.descriptorSet3, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, &sboBuffers.buffer4.descriptor),
+        vks::initializers::writeDescriptorSet(computePipelines.descriptorSet3, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 2, &textureList.tex3.descriptor),
+        vks::initializers::writeDescriptorSet(computePipelines.descriptorSet3, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 3, &textureList.tex4.descriptor)
     };
     vkUpdateDescriptorSets(device, (uint32_t)computeWriteDescriptorSets3.size(), computeWriteDescriptorSets3.data(), 0, NULL);
     std::vector<VkWriteDescriptorSet> computeWriteDescriptorSets4 = {
         vks::initializers::writeDescriptorSet(computePipelines.descriptorSet4, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 0, &sboBuffers.buffer4.descriptor),
-        vks::initializers::writeDescriptorSet(computePipelines.descriptorSet4, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, &sboBuffers.buffer5.descriptor)
+        vks::initializers::writeDescriptorSet(computePipelines.descriptorSet4, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, &sboBuffers.buffer5.descriptor),
+        vks::initializers::writeDescriptorSet(computePipelines.descriptorSet4, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 2, &textureList.tex4.descriptor),
+        vks::initializers::writeDescriptorSet(computePipelines.descriptorSet4, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 3, &textureList.tex1.descriptor)
     };
     vkUpdateDescriptorSets(device, (uint32_t)computeWriteDescriptorSets4.size(), computeWriteDescriptorSets4.data(), 0, NULL);
     std::vector<VkWriteDescriptorSet> computeWriteDescriptorSets5 = {
         vks::initializers::writeDescriptorSet(computePipelines.descriptorSet5, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 0, &sboBuffers.buffer5.descriptor),
-        vks::initializers::writeDescriptorSet(computePipelines.descriptorSet5, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, &sboBuffers.buffer1.descriptor)
+        vks::initializers::writeDescriptorSet(computePipelines.descriptorSet5, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, &sboBuffers.buffer1.descriptor),
+        vks::initializers::writeDescriptorSet(computePipelines.descriptorSet5, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 2, &textureList.tex3.descriptor),
+        vks::initializers::writeDescriptorSet(computePipelines.descriptorSet5, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 3, &textureList.tex1.descriptor)
     };
     vkUpdateDescriptorSets(device, (uint32_t)computeWriteDescriptorSets5.size(), computeWriteDescriptorSets5.data(), 0, NULL);
 
