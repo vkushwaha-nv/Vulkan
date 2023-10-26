@@ -123,6 +123,14 @@ void VulkanExample::setupDescriptorSetLayout()
             &descriptorSetLayout,
             1);
 
+    VkPushConstantRange pushConstantRange;
+    pushConstantRange.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+    pushConstantRange.offset = 0;
+    pushConstantRange.size = sizeof(graphicsPushConstantData);
+
+    pPipelineLayoutCreateInfo.pushConstantRangeCount = 1;
+    pPipelineLayoutCreateInfo.pPushConstantRanges = &pushConstantRange;
+
     VK_CHECK_RESULT(vkCreatePipelineLayout(device, &pPipelineLayoutCreateInfo, nullptr, &pipelineLayout));
 }
 

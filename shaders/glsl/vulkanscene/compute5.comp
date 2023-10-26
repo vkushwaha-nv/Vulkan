@@ -1,5 +1,7 @@
 #version 450
 #extension GL_EXT_shader_explicit_arithmetic_types_int64 : require
+#extension GL_EXT_buffer_reference : require
+#extension GL_EXT_buffer_reference_uvec2 : require
 
 layout (local_size_x = 256, local_size_y = 1) in;
 
@@ -13,7 +15,12 @@ layout(push_constant) uniform PushConstants {
    float temp4;
 } pushConstants;
 
-
+layout(buffer_reference) buffer VKKK;
+layout(buffer_reference, buffer_reference_align = 4, std430) buffer VKKK
+{
+    uint m0[];
+};
+        
 layout(std430, binding=0) buffer ReadData {
     uint inData[];
 };
@@ -36,7 +43,9 @@ void main()
         dstValue += dstValue + int(100*cos(pushConstants.temp2));
         dstValue += dstValue + int(10*cos(pushConstants.temp3));
         dstValue += dstValue + int(56*sin(pushConstants.temp4));
-        outData[pushConstants.dstOffset + gl_GlobalInvocationID.x] = dstValue;
+        
+        uvec2 address = uvec2(pushConstants.srcOffset, pushConstants.dstOffset);
+        VKKK(address).m0[0] = dstValue;
 
         uint x = gl_GlobalInvocationID.x % 1024; // tex is 1024x1024
         uint y = gl_GlobalInvocationID.y % 1024; // tex is 1024x1024

@@ -17,9 +17,6 @@
 #define COMPLEXITY_LEVEL_4     3
 #define COMPLEXITY_LEVEL_5     4
 
-static unsigned currentFrameCounter = 0;
-
-
 class VulkanExample : public VulkanExampleBase
 {
 public:
@@ -44,6 +41,11 @@ public:
         float temp3;
         float temp4;
     } computePushConstantData;
+
+    struct {
+        uint32_t addressHi;
+        uint32_t addressLo;
+    } graphicsPushConstantData;
 
     // Compute pipeline
     struct {
@@ -110,6 +112,7 @@ public:
     VkCommandPool computeCommandPool;
     std::vector<VkCommandBuffer> computeCmdBuffers;
 
+    unsigned currentFrameCounter {0};
     // ------------------------------------------------------------------
 
     VulkanExample();
@@ -126,6 +129,7 @@ public:
     void prepareUniformBuffers(); 
 
     // ----VKKK------------------------------------------------------
+    uint64_t GetBufferDeviceAddress(VkBuffer buffer);
     void createBuffers();
     void createCommandPoolAndBuffers();
     void buildOneTimeSubmitCommandBuffers();
