@@ -1,0 +1,15 @@
+glslangValidator.exe -V compute1.comp -o compute1.spv
+glslangValidator.exe -V compute2.comp -o compute2.spv
+glslangValidator.exe -V compute3.comp -o compute3.spv
+glslangValidator.exe -V compute4.comp -o compute4.spv
+glslangValidator.exe -V compute5.comp -o compute5.spv
+glslangValidator.exe -V draw1.vert -o draw1.vert.spv
+glslangValidator.exe -V draw1.frag -o draw1.frag.spv
+glslangValidator.exe -V draw2.vert -o draw2.vert.spv
+glslangValidator.exe -V draw2.frag -o draw2.frag.spv
+glslangValidator.exe -V draw3.vert -o draw3.vert.spv
+glslangValidator.exe -V draw3.frag -o draw3.frag.spv
+glslangValidator.exe -V draw4.vert -o draw4.vert.spv
+glslangValidator.exe -V draw4.frag -o draw4.frag.spv
+glslangValidator.exe -V draw5.vert -o draw5.vert.spv
+glslangValidator.exe -V draw5.frag -o draw5.frag.spv

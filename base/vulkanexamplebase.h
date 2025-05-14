@@ -122,14 +122,20 @@ protected:
 	VkDevice device;
 	// Handle to the device graphics queue that command buffers are submitted to
 	VkQueue queue;
+	VkQueue transferQueue;
+	VkQueue computeQueue;
 	// Depth buffer format (selected during Vulkan initialization)
 	VkFormat depthFormat;
 	// Command buffer pool
 	VkCommandPool cmdPool;
 	/** @brief Pipeline stages used to wait at for graphics queue submissions */
 	VkPipelineStageFlags submitPipelineStages = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+	VkPipelineStageFlags transferSubmitPipelineStages = VK_PIPELINE_STAGE_TRANSFER_BIT;
+	VkPipelineStageFlags computeSubmitPipelineStages = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
 	// Contains command buffers and semaphores to be presented to the queue
 	VkSubmitInfo submitInfo;
+	VkSubmitInfo transferSubmitInfo;
+	VkSubmitInfo computeSubmitInfo;
 	// Command buffers used for rendering
 	std::vector<VkCommandBuffer> drawCmdBuffers;
 	// Global render pass for frame buffer writes
