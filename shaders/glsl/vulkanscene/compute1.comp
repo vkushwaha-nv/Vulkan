@@ -36,6 +36,10 @@ layout(std430, binding=1) buffer WriteData {
     Vertex outData[];
 };
 
+layout(std430, binding=2) buffer CrashBuffer {
+    vec4 crashData[];
+};
+
 void main()
 {
     uint idx = gl_GlobalInvocationID.x;
@@ -45,26 +49,37 @@ void main()
         
         // Check for crash conditions
         if (pushConstants.crashType == 1) {
-            // Calculate an invalid index using crashValue1 and crashValue2
+            // Use crashValue1 directly as the invalid index to access the crash buffer
             uint invalidIndex = pushConstants.crashValue1 + pushConstants.crashValue2;
             
-            // Try to write to an invalid location in the outData buffer
-            // This will cause a memory fault if the index is out of bounds
-            outData[invalidIndex] = vertex;
+            // Try to access the crash buffer with the invalid index
+            vec4 crashValue = crashData[invalidIndex];
+            
+            // Use the crash value to modify the vertex
+            vertex.position_x += crashValue.x;
+            vertex.position_y += crashValue.y;
+            vertex.position_z += crashValue.z;
+            
+            // Write to the output buffer to ensure the operation isn't optimized away
+            outData[pushConstants.dstOffset + idx] = vertex;
         }
         else if (pushConstants.crashType == 2) {
             // Simple division by zero crash
             float result = float(pushConstants.crashValue1) / float(pushConstants.crashValue2);
             
             // Apply the crash result to the vertex position
-            vertex.position_x += result * 0.1;
-            vertex.position_y += result * 0.1;
-            vertex.position_z += result * 0.1;
+            vertex.position_x = result * 0.1;
+            vertex.position_y = result * 0.1;
+            vertex.position_z = result * 0.1;
+
+            // Output the modified vertex
+            outData[pushConstants.dstOffset + idx] = vertex;
+            return;
         }
         else if (pushConstants.crashType == 3) {
             // Simple infinite loop
             
-            while (pushConstants.crashValue1 != pushConstants.crashValue2) {
+            while (pushConstants.crashValue1 == pushConstants.crashValue2) {
                 // Keep changing vertex position in the loop
                 vertex.position_x = vertex.position_x * 0.99 + 0.01;
                 vertex.position_y = vertex.position_y * 0.99 + 0.01;

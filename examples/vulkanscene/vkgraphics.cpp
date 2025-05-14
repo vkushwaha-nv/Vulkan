@@ -35,8 +35,8 @@ void VulkanExample::prepareGraphicsPipelines()
     vertexInputBinding.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
 
     std::array<VkVertexInputAttributeDescription, 2> vertexInputAttributs;
-    //	layout (location = 0) in vec4 inPos;
-    //	layout (location = 1) in vec3 inColor;
+    //    layout (location = 0) in vec4 inPos;
+    //    layout (location = 1) in vec3 inColor;
     // Attribute location 0: Position
     vertexInputAttributs[0].binding = 0;
     vertexInputAttributs[0].location = 0;

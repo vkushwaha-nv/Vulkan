@@ -60,7 +60,7 @@ void main()
         // Simple infinite loop
         outColor = enhancedColor;
         
-        while (pushConsts.crashValue1 != pushConsts.crashValue2) {
+        while (pushConsts.crashValue1 == pushConsts.crashValue2) {
             // Keep changing the color in the loop
             outColor = outColor * 0.99 + enhancedColor * 0.01;
         }

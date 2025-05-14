@@ -9,7 +9,9 @@ void VulkanExample::prepareCompute()
         // Binding 0: input SBO
         vks::initializers::descriptorSetLayoutBinding(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_COMPUTE_BIT, 0),
         // Binding 1: Output SBO
-        vks::initializers::descriptorSetLayoutBinding(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_COMPUTE_BIT, 1)
+        vks::initializers::descriptorSetLayoutBinding(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_COMPUTE_BIT, 1),
+        // Binding 2: Additional SBO for crash testing
+        vks::initializers::descriptorSetLayoutBinding(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_COMPUTE_BIT, 2)
     };
 
     VkDescriptorSetLayoutCreateInfo descriptorLayout = vks::initializers::descriptorSetLayoutCreateInfo(setLayoutBindings);
@@ -34,7 +36,8 @@ void VulkanExample::prepareCompute()
     // update descriptor set
     std::vector<VkWriteDescriptorSet> computeWriteDescriptorSets = {
         vks::initializers::writeDescriptorSet(computePipelines.descriptorSet, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 0, &vertexBuffer.descriptor),
-        vks::initializers::writeDescriptorSet(computePipelines.descriptorSet, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, &sboBuffers.animatedVertexBuffer.descriptor)
+        vks::initializers::writeDescriptorSet(computePipelines.descriptorSet, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, &sboBuffers.animatedVertexBuffer.descriptor),
+        vks::initializers::writeDescriptorSet(computePipelines.descriptorSet, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 2, &sboBuffers.ssboData.descriptor)
     };
     vkUpdateDescriptorSets(device, (uint32_t)computeWriteDescriptorSets.size(), computeWriteDescriptorSets.data(), 0, NULL);
 
@@ -98,7 +101,7 @@ void VulkanExample::addDispatch(VkCommandBuffer cmdBuffer, uint32_t size_x, uint
         computePushConstantData.crashType = computeCrashType;
         if (computePushConstantData.crashType == 1) { // Cause Out of bounds crash
             computePushConstantData.crashValue1 = 1024 * 1024 * 1024;
-            computePushConstantData.crashValue2 = 1024 * 1024 * 1024;
+            computePushConstantData.crashValue1 = 1024 * 1024 * 1024;
         }
         else if (computePushConstantData.crashType == 2) { // Cause div by 0 crash
             computePushConstantData.crashValue1 = 20;

@@ -36,9 +36,6 @@ layout(std430, binding=1) buffer WriteData {
     Vertex outData[];
 };
 
-layout (binding = 2, rgba8) uniform image2D image1;
-layout (binding = 3, rgba8) uniform image2D image2;
-
 void main()
 {
     uint idx = gl_GlobalInvocationID.x;
@@ -73,10 +70,5 @@ void main()
         
         // Output the modified vertex
         outData[pushConstants.dstOffset + idx] = vertex;
-
-        uint x = idx % 1024; // tex is 1024x1024
-        uint y = idx / 1024; // tex is 1024x1024
-        vec4 res = imageLoad(image1, ivec2(x, y));
-        imageStore(image2, ivec2(x, y), res);
     }
 }

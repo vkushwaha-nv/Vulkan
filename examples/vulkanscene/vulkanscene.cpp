@@ -198,13 +198,15 @@ void VulkanExample::viewChanged()
 void VulkanExample::keyPressed(uint32_t keyCode)
 {
     // F1-F5: Switch between graphics & compute pipelines
-    // 1: Generate out-of-bounds crash in graphics pipeline
-    // 2: Generate division by zero crash in graphics pipeline  
-    // 3: Generate infinite loop crash in graphics pipeline
-    // 4: Generate out-of-bounds crash in compute pipeline
-    // 5: Generate division by zero crash in compute pipeline
-    // 6: Generate infinite loop crash in compute pipeline
+    // 1: Generate out-of-bounds crash in graphics pipeline (draw1.vert only)
+    // 2: Generate division by zero crash in graphics pipeline (draw1.vert only)
+    // 3: Generate infinite loop crash in graphics pipeline (draw1.vert only)
+
+    // 4: Generate out-of-bounds crash in compute pipeline (compute1.comp only)
+    // 5: Generate division by zero crash in compute pipeline (compute1.comp only)
+    // 6: Generate infinite loop crash in compute pipeline (compute1.comp only)
     // 7: Generate crash in transfer operation
+
     // SPACE: Reset everything to default (no crashes and toggle between pipelines per frame)
     switch (keyCode) {
     case KEY_F1:
