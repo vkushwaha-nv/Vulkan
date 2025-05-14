@@ -4,29 +4,72 @@
 layout (local_size_x = 32, local_size_y = 1) in;
 
 layout(push_constant) uniform PushConstants {
-   uint srcOffset;
-   uint dstOffset;
-   uint size;
-   float temp1;
-   float temp2;
-   float temp3;
-   float temp4;
+    uint srcOffset;
+    uint dstOffset;
+    uint size;
+    float time;       // Animation time parameter
+    float waveHeight; // Controls the amplitude of the wave
+    float waveFreq;   // Controls the frequency of oscillation
+    float temp4;      // Unused
 } pushConstants;
 
+// Define the vertex structure to exactly match the C++ Vertex struct
+// In C++: struct Vertex { float position[4]; float color[3]; };
+struct Vertex {
+    float position_x;
+    float position_y;
+    float position_z;
+    float position_w;
+    float color_r;
+    float color_g;
+    float color_b;
+};
 
 layout(std430, binding=0) buffer ReadData {
-    uint inData[];
+    Vertex inData[];
 };
 
 layout(std430, binding=1) buffer WriteData {
-    uint outData[];
+    Vertex outData[];
 };
-
 
 void main()
 {
     uint idx = gl_GlobalInvocationID.x;
-    if (idx < pushConstants.size) {
-        outData[pushConstants.dstOffset + idx] = inData[pushConstants.srcOffset + idx];
+    if (idx < pushConstants.size / 28) { // 28 bytes per vertex (7 floats * 4 bytes)
+        // Copy the vertex data
+        Vertex vertex = inData[pushConstants.srcOffset + idx];
+        
+        // Apply a wave animation based on the vertex position and time
+        // Calculate distance from origin in 3D space to better identify core vertices
+        float distXYZ = length(vec3(vertex.position_x, vertex.position_y, vertex.position_z));
+        
+        // Apply a threshold to prevent core vertices from moving
+        float coreThreshold = 10.0; // Adjust based on your scene scale
+        
+        // Set a clear boundary between core and non-core regions
+        // Core vertices (with distance < threshold) will have attenuation = 0
+        float coreAttenuation = distXYZ < coreThreshold ? 0.0 : 
+                                mix(0.0, 0.8, clamp((distXYZ - coreThreshold) / 15.0, 0.0, 1.0));
+        
+        // Create independent oscillation for each vertex
+        // Use position to create phase differences between vertices
+        float phase = dot(vec3(vertex.position_x, vertex.position_y, vertex.position_z), 
+                          vec3(0.4, 0.2, 0.3)); // Different weights create varied movement
+        
+        // Create a reset cycle over time - goes from 0 to 1 and back to 0
+        float resetCycle = abs(sin(pushConstants.time * 0.1)); // Slower, more subtle cycle
+        
+        // Simple sine oscillation with phase offset
+        float oscillation = sin(pushConstants.time * pushConstants.waveFreq + phase * 3.0);
+        
+        // Apply attenuation and reset cycle
+        float waveFactor = oscillation * pushConstants.waveHeight * coreAttenuation * resetCycle;
+        
+        // Apply the wave to the y position 
+        vertex.position_y += waveFactor;
+        
+        // Output the modified vertex
+        outData[pushConstants.dstOffset + idx] = vertex;
     }
 }

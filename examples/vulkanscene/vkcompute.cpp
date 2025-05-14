@@ -89,10 +89,16 @@ void VulkanExample::addDispatch(VkCommandBuffer cmdBuffer, uint32_t size_x, uint
             computePushConstantData.dstOffset = bufferAddress & 0xFFFFFFFF;
         }
         computePushConstantData.size = vertexDataSize;
-        computePushConstantData.temp1 = float(rand()%100 / 100.0f);
-        computePushConstantData.temp2 = float(rand()%100 / 100.0f);
-        computePushConstantData.temp3 = float(rand()%100 / 100.0f);
-        computePushConstantData.temp4 = float(rand()%100 / 100.0f);
+        
+        // Set wave animation parameters
+        static float totalTime = 0.0f;
+        totalTime += 0.015f; // Slower, more subtle animation
+        
+        computePushConstantData.time = totalTime;
+        computePushConstantData.waveHeight = 0.008f; // Very subtle amplitude
+        computePushConstantData.waveFreq = 0.4f;     // Lower frequency for gentler waves
+        computePushConstantData.temp4 = 0.0f;        // Not used
+        
         vkCmdPushConstants(cmdBuffer,  computePipelines.pipelineLayout, VK_SHADER_STAGE_COMPUTE_BIT, 0,
             sizeof(computePushConstantData), &computePushConstantData);
     }

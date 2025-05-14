@@ -36,10 +36,10 @@ public:
         uint32_t srcOffset;
         uint32_t dstOffset;
         uint32_t size;
-        float temp1;
-        float temp2;
-        float temp3;
-        float temp4;
+        float time;       // Animation time
+        float waveHeight; // Wave height/amplitude
+        float waveFreq;   // Wave frequency
+        float temp4;      // Unused
     } computePushConstantData;
 
     struct {
