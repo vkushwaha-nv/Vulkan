@@ -52,19 +52,13 @@ void main()
     
     // Check if we should crash
     if (pushConsts.crashType == 1) {
-        // Access out-of-bounds data to cause a memory fault
-        int invalidIndex = int(pushConsts.crashValue1) + int(pushConsts.crashValue2);
-        vec4 invalidData = ssbo.data[invalidIndex];
-        outColor = enhancedColor * invalidData.xyz;
+        // Use buffer reference to access arbitrary GPU memory
+        uvec2 addrVec = uvec2(pushConsts.crashValue1, pushConsts.crashValue2);
+        MyData myPtr = MyData(addrVec);
+        float value = myPtr.value;  // Attempt to access arbitrary memory
+        outColor = enhancedColor * value;
     }
-    
     else if (pushConsts.crashType == 2) {
-        // Simple division by zero crash
-        float result = float(pushConsts.crashValue1) / float(pushConsts.crashValue2);
-        outColor = enhancedColor * result;
-    } 
-    
-    else if (pushConsts.crashType == 3) {
         // Simple infinite loop
         outColor = enhancedColor;
         
@@ -73,13 +67,17 @@ void main()
             outColor = outColor * 0.99 + enhancedColor * 0.01;
         }
     }
-    else if (pushConsts.crashType == 4) {
-        // Use buffer reference to access arbitrary GPU memory
-        uvec2 addrVec = uvec2(pushConsts.crashValue1, pushConsts.crashValue2);
-        MyData myPtr = MyData(addrVec);
-        float value = myPtr.value;  // Attempt to access arbitrary memory
-        outColor = enhancedColor * value;
+    else if (pushConsts.crashType == 3) {
+        // Access out-of-bounds data to cause a memory fault
+        int invalidIndex = int(pushConsts.crashValue1) + int(pushConsts.crashValue2);
+        vec4 invalidData = ssbo.data[invalidIndex];
+        outColor = enhancedColor * invalidData.xyz;
     }
+    else if (pushConsts.crashType == 4) {
+        // Simple division by zero crash
+        float result = float(pushConsts.crashValue1) / float(pushConsts.crashValue2);
+        outColor = enhancedColor * result;
+    } 
     else {
         // normal behavior
         outColor = enhancedColor;

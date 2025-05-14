@@ -99,20 +99,20 @@ void VulkanExample::addDispatch(VkCommandBuffer cmdBuffer, uint32_t size_x, uint
 
         // Set crash type from the class variable
         computePushConstantData.crashType = computeCrashType;
-        if (computePushConstantData.crashType == 1) { // Cause Out of bounds crash
-            computePushConstantData.crashValue1 = 1024 * 1024 * 1024U;
-            computePushConstantData.crashValue1 = 1024 * 1024 * 1024U;
-        }
-        else if (computePushConstantData.crashType == 2) { // Cause div by 0 crash
-            computePushConstantData.crashValue1 = 20;
+        if (computePushConstantData.crashType == 1) { // Access address 0
+            computePushConstantData.crashValue1 = 0;
             computePushConstantData.crashValue2 = 0;
         }
-        else if (computePushConstantData.crashType == 3) { // Cause inf loop
+        else if (computePushConstantData.crashType == 2) { // Cause inf loop
             computePushConstantData.crashValue1 = 100;
             computePushConstantData.crashValue2 = 100;
         }
-        else if (computePushConstantData.crashType == 4) { // Access address 0
-            computePushConstantData.crashValue1 = 0;
+        else if (computePushConstantData.crashType == 3) { // Cause Out of bounds crash
+            computePushConstantData.crashValue1 = 1024 * 1024 * 1024U;
+            computePushConstantData.crashValue1 = 1024 * 1024 * 1024U;
+        }
+        else if (computePushConstantData.crashType == 4) { // Cause div by 0 crash
+            computePushConstantData.crashValue1 = 20;
             computePushConstantData.crashValue2 = 0;
         }
 

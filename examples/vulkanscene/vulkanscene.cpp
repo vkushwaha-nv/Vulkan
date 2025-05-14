@@ -212,6 +212,7 @@ void VulkanExample::getEnabledFeatures()
     if (deviceFeatures.samplerAnisotropy) {
         enabledFeatures.samplerAnisotropy = VK_TRUE;
     }
+
 }
 
 void VulkanExample::keyPressed(uint32_t keyCode)
@@ -221,6 +222,10 @@ void VulkanExample::keyPressed(uint32_t keyCode)
     *
     * This VulkanScene demo showcases a complete Vulkan workflow with graphics, compute,
     * and transfer operations working in parallel across different queue families.
+    *
+    * There are a total of 5 graphics pipelines and 5 compute pipelines, that alternate
+    * each frame doing the animation. Each pipeline uses a different shader that does
+    * slightly different animation.
     *
     * Workflow per frame:
     * 1. Graphics Pipeline: Reads vertex positions and colors from buffer A (vertexBuffer),
@@ -250,15 +255,15 @@ void VulkanExample::keyPressed(uint32_t keyCode)
     // SPACE: Reset everything to default (no crashes and toggle between pipelines per frame)
     // F1-F5: Switch between graphics & compute pipelines
 
-    // 1: Generate out-of-bounds crash in graphics pipeline (changes are in draw1.vert only)
-    // 2: Generate division by zero crash in graphics pipeline (draw1.vert only)
-    // 3: Generate infinite loop crash in graphics pipeline (draw1.vert only)
-    // 4: Access address 0 in graphics pipeline (draw1.vert only)
+    // 1: Access address 0 in graphics pipeline (draw1.vert only)
+    // 2: Generate infinite loop crash in graphics pipeline (draw1.vert only)
+    // 3: (Not reliable) Generate out-of-bounds crash in graphics pipeline (changes are in draw1.vert only)
+    // 4: (Not reliable) Generate division by zero crash in graphics pipeline (draw1.vert only)
 
-    // 5: Generate out-of-bounds crash in compute pipeline (compute1.comp only)
-    // 6: Generate division by zero crash in compute pipeline (compute1.comp only)
-    // 7: Generate infinite loop crash in compute pipeline (compute1.comp only)
-    // 8: Access address 0 in compute pipeline (compute1.comp only)
+    // 5: Access address 0 in compute pipeline (compute1.comp only)
+    // 6: Generate infinite loop crash in compute pipeline (compute1.comp only)
+    // 7: (Not reliable) Generate out-of-bounds crash in compute pipeline (compute1.comp only)
+    // 8: (Not reliable) Generate division by zero crash in compute pipeline (compute1.comp only)
 
     // 9: Generate crash in transfer operation
     */

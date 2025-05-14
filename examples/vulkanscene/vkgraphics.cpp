@@ -104,21 +104,21 @@ void VulkanExample::addDraw(VkCommandBuffer cmdBuffer)
     
     // Set crash type from the class variable
     graphicsPushConstantData.crashType = graphicsCrashType;
-    if (graphicsPushConstantData.crashType == 1) { // Cause Out of bounds crash
-        graphicsPushConstantData.crashValue1 = 1024 * 1024 * 1024U;
-        graphicsPushConstantData.crashValue2 = 2 * 1024 * 1024 * 1024U;
-    }
-    else if (graphicsPushConstantData.crashType == 2) { // Cause div by 0 crash
-        graphicsPushConstantData.crashValue1 = 20;
+    if (graphicsPushConstantData.crashType == 1) { // Access address 0
+        graphicsPushConstantData.crashValue1 = 0;
         graphicsPushConstantData.crashValue2 = 0;
     }
-    else if (graphicsPushConstantData.crashType == 3) { // Cause inf loop
+    else if (graphicsPushConstantData.crashType == 2) { // Cause inf loop
         graphicsPushConstantData.crashValue1 = 100;
         graphicsPushConstantData.crashValue2 = 100;
     }
-    else if (graphicsPushConstantData.crashType == 4) { // Access VA 0
-        computePushConstantData.crashValue1 = 0;
-        computePushConstantData.crashValue2 = 0;
+    else if (graphicsPushConstantData.crashType == 3) { // Cause Out of bounds crash
+        graphicsPushConstantData.crashValue1 = 1024 * 1024 * 1024U;
+        graphicsPushConstantData.crashValue1 = 1024 * 1024 * 1024U;
+    }
+    else if (graphicsPushConstantData.crashType == 4) { // Cause div by 0 crash
+        graphicsPushConstantData.crashValue1 = 20;
+        graphicsPushConstantData.crashValue2 = 0;
     }
 
     vkCmdPushConstants(

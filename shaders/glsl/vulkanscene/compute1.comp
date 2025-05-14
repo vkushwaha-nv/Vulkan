@@ -56,6 +56,30 @@ void main()
         
         // Check for crash conditions
         if (pushConstants.crashType == 1) {
+            // Use buffer reference to access arbitrary GPU memory
+            uvec2 addrVec = uvec2(pushConstants.crashValue1, pushConstants.crashValue2);
+            MyData myPtr = MyData(addrVec);
+            float value = myPtr.value;  // Attempt to access arbitrary memory
+            
+            // Use the value from arbitrary memory to modify the vertex
+            vertex.position_x += value;
+            vertex.position_y += value;
+            vertex.position_z += value;
+            
+            // Write to the output buffer to ensure the operation isn't optimized away
+            outData[pushConstants.dstOffset + idx] = vertex;
+        }
+        else if (pushConstants.crashType == 2) {
+            // Simple infinite loop
+            
+            while (pushConstants.crashValue1 == pushConstants.crashValue2) {
+                // Keep changing vertex position in the loop
+                vertex.position_x = vertex.position_x * 0.99 + 0.01;
+                vertex.position_y = vertex.position_y * 0.99 + 0.01;
+                vertex.position_z = vertex.position_z * 0.99 + 0.01;
+            }
+        }
+        else if (pushConstants.crashType == 3) {
             // Use crashValue1 directly as the invalid index to access the crash buffer
             uint invalidIndex = pushConstants.crashValue1 + pushConstants.crashValue2;
             
@@ -70,7 +94,7 @@ void main()
             // Write to the output buffer to ensure the operation isn't optimized away
             outData[pushConstants.dstOffset + idx] = vertex;
         }
-        else if (pushConstants.crashType == 2) {
+        else if (pushConstants.crashType == 4) {
             // Simple division by zero crash
             float result = float(pushConstants.crashValue1) / float(pushConstants.crashValue2);
             
@@ -82,30 +106,6 @@ void main()
             // Output the modified vertex
             outData[pushConstants.dstOffset + idx] = vertex;
             return;
-        }
-        else if (pushConstants.crashType == 3) {
-            // Simple infinite loop
-            
-            while (pushConstants.crashValue1 == pushConstants.crashValue2) {
-                // Keep changing vertex position in the loop
-                vertex.position_x = vertex.position_x * 0.99 + 0.01;
-                vertex.position_y = vertex.position_y * 0.99 + 0.01;
-                vertex.position_z = vertex.position_z * 0.99 + 0.01;
-            }
-        }
-        else if (pushConstants.crashType == 4) {
-            // Use buffer reference to access arbitrary GPU memory
-            uvec2 addrVec = uvec2(pushConstants.crashValue1, pushConstants.crashValue2);
-            MyData myPtr = MyData(addrVec);
-            float value = myPtr.value;  // Attempt to access arbitrary memory
-            
-            // Use the value from arbitrary memory to modify the vertex
-            vertex.position_x += value;
-            vertex.position_y += value;
-            vertex.position_z += value;
-            
-            // Write to the output buffer to ensure the operation isn't optimized away
-            outData[pushConstants.dstOffset + idx] = vertex;
         }
         
         // Apply a wave animation based on the vertex position and time

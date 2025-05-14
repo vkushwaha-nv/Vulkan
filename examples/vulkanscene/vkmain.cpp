@@ -21,7 +21,7 @@ uint64_t VulkanExample::GetBufferDeviceAddress(VkBuffer buffer)
     VkBufferDeviceAddressInfo bufferDevice{};
     bufferDevice.sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO;
     bufferDevice.buffer = buffer;
-    return 0; //vkGetBufferDeviceAddress(device, &bufferDevice);
+    return vkGetBufferDeviceAddress(device, &bufferDevice);
 }
 
 void VulkanExample::createBuffers()
