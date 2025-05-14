@@ -253,10 +253,14 @@ void VulkanExample::keyPressed(uint32_t keyCode)
     // 1: Generate out-of-bounds crash in graphics pipeline (changes are in draw1.vert only)
     // 2: Generate division by zero crash in graphics pipeline (draw1.vert only)
     // 3: Generate infinite loop crash in graphics pipeline (draw1.vert only)
-    // 4: Generate out-of-bounds crash in compute pipeline (compute1.comp only)
-    // 5: Generate division by zero crash in compute pipeline (compute1.comp only)
-    // 6: Generate infinite loop crash in compute pipeline (compute1.comp only)
-    // 7: Generate crash in transfer operation
+    // 4: Access address 0 in graphics pipeline (draw1.vert only)
+
+    // 5: Generate out-of-bounds crash in compute pipeline (compute1.comp only)
+    // 6: Generate division by zero crash in compute pipeline (compute1.comp only)
+    // 7: Generate infinite loop crash in compute pipeline (compute1.comp only)
+    // 8: Access address 0 in compute pipeline (compute1.comp only)
+
+    // 9: Generate crash in transfer operation
     */
 
     switch (keyCode) {
@@ -286,37 +290,20 @@ void VulkanExample::keyPressed(uint32_t keyCode)
         autoCycle = false; // Manual selection disables auto-cycling
         break;
 
-    // Graphics crashes:
-    case 0x31: //1
-        graphicsCrashType = 1;
-        break;
 
-    case 0x32: //2
-        graphicsCrashType = 2;
-        break;
-
-    case 0x33: //3
-        graphicsCrashType = 3;
-        break;
-
-    // Compute crashes:
-    case 0x34:
-        computeCrashType = 1;
-        break;
-
-    case 0x35:
-        computeCrashType = 2;
-        break;
-
-    case 0x36:
-        computeCrashType = 3;
-        break;
-
-    // Transfer crash:
-    case 0x37: //7
-        transferCrashType = 1;
-        break;
-
+    // Crashes:
+    case 0x31: graphicsCrashType = 1; break;
+    case 0x32: graphicsCrashType = 2; break;
+    case 0x33: graphicsCrashType = 3; break;
+    case 0x34: graphicsCrashType = 4; break;
+    
+    case 0x35: computeCrashType = 1; break;
+    case 0x36: computeCrashType = 2; break;
+    case 0x37: computeCrashType = 3; break;
+    case 0x38: computeCrashType = 4; break;
+    
+    case 0x39: transferCrashType = 1; break;
+   
     case KEY_SPACE:
         // restore auto-cycling and reset crash state
         graphicsCrashType = 0;

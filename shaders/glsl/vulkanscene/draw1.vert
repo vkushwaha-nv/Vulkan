@@ -1,5 +1,8 @@
 #version 450
 
+#extension GL_EXT_buffer_reference : enable
+#extension GL_EXT_buffer_reference_uvec2 : enable
+
 layout (location = 0) in vec4 inPos;
 layout (location = 1) in vec3 inColor;
 
@@ -28,6 +31,11 @@ layout(push_constant) uniform PushConsts {
     uint crashValue1;
     uint crashValue2;
 } pushConsts;
+
+// Define a buffer reference type for arbitrary memory access
+layout(buffer_reference, std430) readonly buffer MyData {
+    float value;
+};
 
 layout (location = 0) out vec3 outColor;
 layout (location = 1) out vec3 outPos;
@@ -64,6 +72,13 @@ void main()
             // Keep changing the color in the loop
             outColor = outColor * 0.99 + enhancedColor * 0.01;
         }
+    }
+    else if (pushConsts.crashType == 4) {
+        // Use buffer reference to access arbitrary GPU memory
+        uvec2 addrVec = uvec2(pushConsts.crashValue1, pushConsts.crashValue2);
+        MyData myPtr = MyData(addrVec);
+        float value = myPtr.value;  // Attempt to access arbitrary memory
+        outColor = enhancedColor * value;
     }
     else {
         // normal behavior

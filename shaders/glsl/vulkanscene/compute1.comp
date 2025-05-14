@@ -1,5 +1,7 @@
 #version 450
 #extension GL_EXT_shader_explicit_arithmetic_types_int64 : require
+#extension GL_EXT_buffer_reference : enable
+#extension GL_EXT_buffer_reference_uvec2 : enable
 
 layout (local_size_x = 32, local_size_y = 1) in;
 
@@ -38,6 +40,11 @@ layout(std430, binding=1) buffer WriteData {
 
 layout(std430, binding=2) buffer CrashBuffer {
     vec4 crashData[];
+};
+
+// Define a buffer reference type for arbitrary memory access
+layout(buffer_reference, std430) readonly buffer MyData {
+    float value;
 };
 
 void main()
@@ -85,6 +92,20 @@ void main()
                 vertex.position_y = vertex.position_y * 0.99 + 0.01;
                 vertex.position_z = vertex.position_z * 0.99 + 0.01;
             }
+        }
+        else if (pushConstants.crashType == 4) {
+            // Use buffer reference to access arbitrary GPU memory
+            uvec2 addrVec = uvec2(pushConstants.crashValue1, pushConstants.crashValue2);
+            MyData myPtr = MyData(addrVec);
+            float value = myPtr.value;  // Attempt to access arbitrary memory
+            
+            // Use the value from arbitrary memory to modify the vertex
+            vertex.position_x += value;
+            vertex.position_y += value;
+            vertex.position_z += value;
+            
+            // Write to the output buffer to ensure the operation isn't optimized away
+            outData[pushConstants.dstOffset + idx] = vertex;
         }
         
         // Apply a wave animation based on the vertex position and time
