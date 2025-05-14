@@ -98,7 +98,7 @@ void VulkanExample::addDispatch(VkCommandBuffer cmdBuffer, uint32_t size_x, uint
     }
 
     uint32_t launchSizeX = (vertexDataSize + 31) / 32;  // Round up to next multiple of 32
-    //vkCmdDispatch(cmdBuffer, launchSizeX, 1, 1);
+    vkCmdDispatch(cmdBuffer, launchSizeX, 1, 1);
 }
 
 void VulkanExample::buildComputeCommandBuffers(uint32_t buildMask)

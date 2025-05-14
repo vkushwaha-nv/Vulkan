@@ -95,8 +95,7 @@ void VulkanExample::buildOneTimeSubmitCommandBuffers()
 
     VK_CHECK_RESULT(vkBeginCommandBuffer(oneTimeSubmitCmdBuffer, &cmdBufInfo));
 
-    // fill SSBOs buffer with random data
-    vkCmdFillBuffer(oneTimeSubmitCmdBuffer, sboBuffers.animatedVertexBuffer.buffer, 0, vertexDataSize, 0x22222222);
+    // Fill other SSBOs buffer with random data
     vkCmdFillBuffer(oneTimeSubmitCmdBuffer, sboBuffers.ssboData.buffer, 0, SBO_BUFFER_DATA_SIZE, 0x33333333);
     vkCmdFillBuffer(oneTimeSubmitCmdBuffer, sboBuffers.debugBuffer.buffer, 0, SBO_BUFFER_DEBUG_SIZE, 0x44444444);
 
@@ -223,6 +222,32 @@ void VulkanExample::buildOneTimeSubmitCommandBuffers()
             numLoops--;
             t++;
         }
+        
+        // Insert a memory barrier to ensure vertex buffer updates are visible
+        VkBufferMemoryBarrier bufferBarrier = vks::initializers::bufferMemoryBarrier();
+        bufferBarrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+        bufferBarrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+        bufferBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        bufferBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        bufferBarrier.buffer = vertexBuffer.buffer;
+        bufferBarrier.offset = 0;
+        bufferBarrier.size = vertexDataSize;
+        
+        vkCmdPipelineBarrier(
+            oneTimeSubmitCmdBuffer,
+            VK_PIPELINE_STAGE_TRANSFER_BIT,
+            VK_PIPELINE_STAGE_TRANSFER_BIT,
+            0,
+            0, nullptr,
+            1, &bufferBarrier,
+            0, nullptr);
+            
+        // Copy the vertex buffer data to the animated vertex buffer
+        VkBufferCopy copyRegion{};
+        copyRegion.srcOffset = 0;
+        copyRegion.dstOffset = 0;
+        copyRegion.size = vertexDataSize;
+        vkCmdCopyBuffer(oneTimeSubmitCmdBuffer, vertexBuffer.buffer, sboBuffers.animatedVertexBuffer.buffer, 1, &copyRegion);
     }
     VK_CHECK_RESULT(vkEndCommandBuffer(oneTimeSubmitCmdBuffer));
 }
@@ -251,6 +276,11 @@ void VulkanExample::prepare()
     prepareCompute();
     createCommandPoolAndBuffers();
 
+    // Create semaphores for synchronization
+    VkSemaphoreCreateInfo semaphoreCreateInfo = vks::initializers::semaphoreCreateInfo();
+    VK_CHECK_RESULT(vkCreateSemaphore(device, &semaphoreCreateInfo, nullptr, &graphicsReady));
+    VK_CHECK_RESULT(vkCreateSemaphore(device, &semaphoreCreateInfo, nullptr, &computeReady));
+
     buildOneTimeSubmitCommandBuffers();
 
     buildGraphicsCommandBuffers(7); // build all 3 command buffers the first time
@@ -263,15 +293,51 @@ void VulkanExample::prepare()
 void VulkanExample::draw()
 {
     buildGraphicsCommandBuffers(1 << currentBuffer);
-
     buildTransferCommandBuffers(1 << currentBuffer);
-    
     buildComputeCommandBuffers(1 << currentBuffer);
 
-    // get new value for currentBuffer
+    // Get new value for currentBuffer and prepare the frame (this gets semaphores.presentComplete)
     VulkanExampleBase::prepareFrame();
 
-    // graphics submit
+    // 1. Transfer submit first - waits on presentComplete and signals graphicsComputeReady
+    std::vector<VkCommandBuffer> transferCmdBuffersToSubmit;
+    transferCmdBuffersToSubmit.push_back(copyCmdBuffers[currentBuffer]);
+    
+    transferSubmitInfo.commandBufferCount = (uint32_t)transferCmdBuffersToSubmit.size();
+    transferSubmitInfo.pCommandBuffers = transferCmdBuffersToSubmit.data();
+    
+    // Wait for presentation semaphore
+    transferSubmitInfo.waitSemaphoreCount = 1;
+    transferSubmitInfo.pWaitSemaphores = &semaphores.presentComplete;
+    VkPipelineStageFlags transferWaitStage = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
+    transferSubmitInfo.pWaitDstStageMask = &transferWaitStage;
+    
+    // Signal completion for graphics and compute to start (signal both semaphores)
+    VkSemaphore transferSignalSemaphores[] = {graphicsReady, computeReady};
+    transferSubmitInfo.signalSemaphoreCount = 2;
+    transferSubmitInfo.pSignalSemaphores = transferSignalSemaphores;
+    
+    VK_CHECK_RESULT(vkQueueSubmit(transferQueue, 1, &transferSubmitInfo, VK_NULL_HANDLE));
+
+    // 2. Compute submit - waits on computeReady and signals nothing
+    std::vector<VkCommandBuffer> computeCmdBuffersToSubmit;
+    computeCmdBuffersToSubmit.push_back(computeCmdBuffers[currentBuffer]);
+    
+    computeSubmitInfo.commandBufferCount = (uint32_t)computeCmdBuffersToSubmit.size();
+    computeSubmitInfo.pCommandBuffers = computeCmdBuffersToSubmit.data();
+    
+    // Wait for transfer to complete
+    computeSubmitInfo.waitSemaphoreCount = 1;
+    computeSubmitInfo.pWaitSemaphores = &computeReady;
+    VkPipelineStageFlags computeWaitStage = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
+    computeSubmitInfo.pWaitDstStageMask = &computeWaitStage;
+    
+    // Compute doesn't signal any semaphores
+    computeSubmitInfo.signalSemaphoreCount = 0;
+    
+    VK_CHECK_RESULT(vkQueueSubmit(computeQueue, 1, &computeSubmitInfo, VK_NULL_HANDLE));
+
+    // 3. Graphics submit - waits on graphicsReady and signals renderComplete
     std::vector<VkCommandBuffer> graphicsCmdBuffersToSubmit;
     if (!currentFrameCounter) {
         // do only one time
@@ -279,24 +345,24 @@ void VulkanExample::draw()
     }
     graphicsCmdBuffersToSubmit.push_back(drawCmdBuffers[currentBuffer]);
 
-    submitInfo.commandBufferCount = (uint32_t)graphicsCmdBuffersToSubmit.size();
-    submitInfo.pCommandBuffers = graphicsCmdBuffersToSubmit.data();
-    VK_CHECK_RESULT(vkQueueSubmit(queue, 1, &submitInfo, VK_NULL_HANDLE));
+    // Create graphics submit info
+    VkSubmitInfo graphicsSubmitInfo = {};
+    graphicsSubmitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    graphicsSubmitInfo.commandBufferCount = (uint32_t)graphicsCmdBuffersToSubmit.size();
+    graphicsSubmitInfo.pCommandBuffers = graphicsCmdBuffersToSubmit.data();
+    
+    // Wait for transfer to complete via graphicsReady semaphore
+    graphicsSubmitInfo.waitSemaphoreCount = 1;
+    graphicsSubmitInfo.pWaitSemaphores = &graphicsReady;
+    VkPipelineStageFlags graphicsWaitStage = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
+    graphicsSubmitInfo.pWaitDstStageMask = &graphicsWaitStage;
+    
+    // Signal renderComplete semaphore for the presentation engine
+    graphicsSubmitInfo.signalSemaphoreCount = 1;
+    graphicsSubmitInfo.pSignalSemaphores = &semaphores.renderComplete;
+    
+    VK_CHECK_RESULT(vkQueueSubmit(queue, 1, &graphicsSubmitInfo, VK_NULL_HANDLE));
 
-    // transfer submit
-    std::vector<VkCommandBuffer> transferCmdBuffersToSubmit;
-    transferCmdBuffersToSubmit.push_back(copyCmdBuffers[currentBuffer]);
-    transferSubmitInfo.commandBufferCount = (uint32_t)transferCmdBuffersToSubmit.size();
-    transferSubmitInfo.pCommandBuffers = transferCmdBuffersToSubmit.data();
-    VK_CHECK_RESULT(vkQueueSubmit(transferQueue, 1, &transferSubmitInfo, VK_NULL_HANDLE));
-
-    // compute submit
-    std::vector<VkCommandBuffer> computeCmdBuffersToSubmit;
-    computeCmdBuffersToSubmit.push_back(computeCmdBuffers[currentBuffer]);
-    computeSubmitInfo.commandBufferCount = (uint32_t)computeCmdBuffersToSubmit.size();
-    computeSubmitInfo.pCommandBuffers = computeCmdBuffersToSubmit.data();
-    VK_CHECK_RESULT(vkQueueSubmit(computeQueue, 1, &computeSubmitInfo, VK_NULL_HANDLE));
-
-    // this uses the value of currentBuffer
+    // Submit frame for presentation
     VulkanExampleBase::submitFrame();
 }

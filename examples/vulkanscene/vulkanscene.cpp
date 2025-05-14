@@ -51,6 +51,10 @@ VulkanExample::~VulkanExample()
 
     vertexBuffer.destroy();
 
+    // Clean up semaphores
+    vkDestroySemaphore(device, graphicsReady, nullptr);
+    vkDestroySemaphore(device, computeReady, nullptr);
+
     destroyCommandBuffers();
     vkDestroyCommandPool(device, copyCommandPool, nullptr);
     vkDestroyCommandPool(device, graphicsCommandPool, nullptr);

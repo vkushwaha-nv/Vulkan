@@ -131,7 +131,7 @@ void VulkanExample::buildGraphicsCommandBuffers(uint32_t buildMask)
 
         // Copy identifier
         int pData[] = { 0x657921, 0x300001 };
-        vkCmdUpdateBuffer(drawCmdBuffers[i], sboBuffers.debugBuffer.buffer, 0, sizeof(uint32_t) * 2, pData);
+        //vkCmdUpdateBuffer(drawCmdBuffers[i], sboBuffers.debugBuffer.buffer, 0, sizeof(uint32_t) * 2, pData);
 
         vkCmdBeginRenderPass(drawCmdBuffers[i], &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 
@@ -146,7 +146,7 @@ void VulkanExample::buildGraphicsCommandBuffers(uint32_t buildMask)
         // add draws
         {
             pData[1] = 0x330000 + currentFrameCounter;
-            vkCmdUpdateBuffer(drawCmdBuffers[i], sboBuffers.debugBuffer.buffer, 0, sizeof(uint32_t) * 2, pData);
+            //vkCmdUpdateBuffer(drawCmdBuffers[i], sboBuffers.debugBuffer.buffer, 0, sizeof(uint32_t) * 2, pData);
             addDraw(drawCmdBuffers[i]);
         }
 

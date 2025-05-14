@@ -11,7 +11,7 @@ void VulkanExample::addCopyCommands(VkCommandBuffer cmdBuffer, uint32_t copyCoun
     vkCmdUpdateBuffer(cmdBuffer, sboBuffers.ssboData.buffer, 0, sizeof(uint32_t) * 2, pData);
 
     copyRegion.size = copySize;
-    //vkCmdCopyBuffer(cmdBuffer, sboBuffers.animatedVertexBuffer.buffer, vertexBuffer.buffer, 1, &copyRegion);
+    vkCmdCopyBuffer(cmdBuffer, sboBuffers.animatedVertexBuffer.buffer, vertexBuffer.buffer, 1, &copyRegion);
 }
 
 void VulkanExample::buildTransferCommandBuffers(uint32_t buildMask)

@@ -16,6 +16,10 @@
 class VulkanExample : public VulkanExampleBase
 {
 public:
+    // Synchronization primitives
+    VkSemaphore graphicsReady = VK_NULL_HANDLE;
+    VkSemaphore computeReady = VK_NULL_HANDLE;
+
     struct {
         vks::Buffer uboMVPBuffer;
     } uniformData;
