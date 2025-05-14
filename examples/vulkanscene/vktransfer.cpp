@@ -4,12 +4,15 @@
 
 void VulkanExample::addCopyCommands(VkCommandBuffer cmdBuffer, uint32_t copyCount, VkDeviceSize copySize)
 {
-    bool crash = false;//currentFrameCounter == 100;
     VkBufferCopy copyRegion = {};
 
     uint32_t pData[] = { 0x657921, 0x11000000 + currentFrameCounter};
-    vkCmdUpdateBuffer(cmdBuffer, sboBuffers.ssboData.buffer, 0, sizeof(uint32_t) * 2, pData);
+    vkCmdUpdateBuffer(cmdBuffer, sboBuffers.debugBuffer.buffer, 0, sizeof(uint32_t) * 2, pData);
 
+    if (transferCrashType != 0) {
+        // Create a crash by setting the destination offset to 3 GB
+        copyRegion.dstOffset = 3ULL * 1024 * 1024 * 1024; // 3 GB offset
+    }
     copyRegion.size = copySize;
     vkCmdCopyBuffer(cmdBuffer, sboBuffers.animatedVertexBuffer.buffer, vertexBuffer.buffer, 1, &copyRegion);
 }
@@ -27,7 +30,7 @@ void VulkanExample::buildTransferCommandBuffers(uint32_t buildMask)
 
         // Copy identifier
         int pData[] = { 0x657921, 0x1001 };
-        vkCmdUpdateBuffer(copyCmdBuffers[i], sboBuffers.ssboData.buffer, 0, sizeof(uint32_t) * 2, pData);
+        vkCmdUpdateBuffer(copyCmdBuffers[i], sboBuffers.debugBuffer.buffer, 0, sizeof(uint32_t) * 2, pData);
 
         VkDeviceSize vertexDataSize = sizeof(Vertex) * NUM_MAX_VERTICES;
         addCopyCommands(copyCmdBuffers[i], 10 /* num copies */, vertexDataSize);

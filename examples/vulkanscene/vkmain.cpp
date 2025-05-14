@@ -296,6 +296,7 @@ void VulkanExample::draw()
     if (autoCycle) {
         // Change animation every frame
         selectedComputePipeline = currentFrameCounter % 5;
+        selectedGraphicsPipeline = currentFrameCounter % 5;
     }
     
     buildGraphicsCommandBuffers(1 << currentBuffer);

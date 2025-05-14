@@ -79,8 +79,6 @@ void VulkanExample::prepareGraphicsPipelines()
 
 void VulkanExample::addDraw(VkCommandBuffer cmdBuffer)
 {
-    bool crash = false; //currentFrameCounter == 100;
-
     VkPipeline pipelineList[] = {
         graphicsPipelines.pipeline1,
         graphicsPipelines.pipeline2,
@@ -88,17 +86,44 @@ void VulkanExample::addDraw(VkCommandBuffer cmdBuffer)
         graphicsPipelines.pipeline4,
         graphicsPipelines.pipeline5,
     };
-    int randPipeline = 0; // rand() % 1; // vkkk force same pipeline
-    vkCmdBindPipeline(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, crash ? graphicsPipelines.pipeline5 : pipelineList[randPipeline]);
+    
+    // Use the selected graphics pipeline instead of a fixed one
+    vkCmdBindPipeline(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineList[selectedGraphicsPipeline]);
     VkDeviceSize vertexOffset = 0;
     vkCmdBindVertexBuffers(cmdBuffer, 0, 1, &vertexBuffer.buffer, &vertexOffset);
 
-    if (crash) {
-        graphicsPushConstantData.addressHi = 0xFED000;
-        graphicsPushConstantData.addressLo = 0xFED000;
-        vkCmdPushConstants(cmdBuffer, graphicsPipelines.pipelineLayout, VK_SHADER_STAGE_FRAGMENT_BIT, 0,
-            sizeof(graphicsPushConstantData), &graphicsPushConstantData);
+    float time = static_cast<float>(currentFrameCounter) * 0.01f;
+    
+    graphicsPushConstantData.time = time;
+    graphicsPushConstantData.animationTime = time * 0.2f;
+    
+    graphicsPushConstantData.colorMod = 0.7f + 0.3f * sin(time * 0.2f);
+    graphicsPushConstantData.colorShift = sin(time * 0.3f) * 0.3f + 0.5f;
+    graphicsPushConstantData.pulseSpeed = 0.3f + 0.2f * sin(time * 0.1f);
+    graphicsPushConstantData.colorIntensity = 0.7f + 0.15f * sin(time * 0.15f);
+    
+    // Set crash type from the class variable
+    graphicsPushConstantData.crashType = graphicsCrashType;
+    if (graphicsPushConstantData.crashType == 1) { // Cause Out of bounds crash
+        graphicsPushConstantData.crashValue1 = 1024 * 1024 * 1024;
+        graphicsPushConstantData.crashValue2 = 1024 * 1024 * 1024;
     }
+    else if (graphicsPushConstantData.crashType == 2) { // Cause div by 0 crash
+        graphicsPushConstantData.crashValue1 = 20;
+        graphicsPushConstantData.crashValue2 = 0;
+    }
+    else if (graphicsPushConstantData.crashType == 3) { // Cause inf loop
+        graphicsPushConstantData.crashValue1 = 100;
+        graphicsPushConstantData.crashValue2 = 100;
+    }
+
+    vkCmdPushConstants(
+        cmdBuffer,
+        graphicsPipelines.pipelineLayout,
+        VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
+        0,
+        sizeof(graphicsPushConstantData),
+        &graphicsPushConstantData);
 
     vkCmdDraw(cmdBuffer, NUM_MAX_VERTICES - 1024, 1, 0, 0);
 }

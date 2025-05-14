@@ -11,6 +11,9 @@ layout(push_constant) uniform PushConstants {
     float waveHeight; // Controls the amplitude of the wave
     float waveFreq;   // Controls the frequency of oscillation
     float temp4;      // Unused
+    uint crashType;   // Type of crash to simulate (0 = none)
+    uint crashValue1; // Additional crash parameter 1
+    uint crashValue2; // Additional crash parameter 2
 } pushConstants;
 
 // Define the vertex structure to exactly match the C++ Vertex struct

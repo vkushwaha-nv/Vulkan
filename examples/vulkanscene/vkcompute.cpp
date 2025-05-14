@@ -63,7 +63,6 @@ void VulkanExample::prepareCompute()
 
 void VulkanExample::addDispatch(VkCommandBuffer cmdBuffer, uint32_t size_x, uint32_t size_y, uint32_t size_z)
 {
-    bool crash = false; //currentFrameCounter == 100;
     uint32_t vertexDataSize = sizeof(Vertex) * NUM_MAX_VERTICES;
 
     {
@@ -84,12 +83,6 @@ void VulkanExample::addDispatch(VkCommandBuffer cmdBuffer, uint32_t size_x, uint
     {
         computePushConstantData.srcOffset = 0;
         computePushConstantData.dstOffset = 0;
-        
-        if (crash) {
-            uint64_t bufferAddress = GetBufferDeviceAddress(sboBuffers.ssboData.buffer);
-            computePushConstantData.srcOffset = bufferAddress >> 32;
-            computePushConstantData.dstOffset = bufferAddress & 0xFFFFFFFF;
-        }
         computePushConstantData.size = vertexDataSize;
         
         // Set wave animation parameters
@@ -100,7 +93,22 @@ void VulkanExample::addDispatch(VkCommandBuffer cmdBuffer, uint32_t size_x, uint
         computePushConstantData.waveHeight = 0.008f; // Very subtle amplitude
         computePushConstantData.waveFreq = 0.4f;     // Lower frequency for gentler waves
         computePushConstantData.temp4 = 0.0f;        // Not used
-        
+
+        // Set crash type from the class variable
+        computePushConstantData.crashType = computeCrashType;
+        if (computePushConstantData.crashType == 1) { // Cause Out of bounds crash
+            computePushConstantData.crashValue1 = 1024 * 1024 * 1024;
+            computePushConstantData.crashValue2 = 1024 * 1024 * 1024;
+        }
+        else if (computePushConstantData.crashType == 2) { // Cause div by 0 crash
+            computePushConstantData.crashValue1 = 20;
+            computePushConstantData.crashValue2 = 0;
+        }
+        else if (computePushConstantData.crashType == 3) { // Cause inf loop
+            computePushConstantData.crashValue1 = 100;
+            computePushConstantData.crashValue2 = 100;
+        }
+
         vkCmdPushConstants(
             cmdBuffer,
             computePipelines.pipelineLayout,

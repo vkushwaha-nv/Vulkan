@@ -12,13 +12,34 @@ layout (binding = 0) uniform UBO
     vec3 lightpos;
 } ubo;
 
-layout (location = 0) out vec3 outColor;
+layout(push_constant) uniform PushConsts {
+    float time;
+    float animationTime;
+    float colorMod;
+    float colorShift;
+    float pulseSpeed;
+    float colorIntensity;
+    uint crashType;
+    uint crashValue1;
+    uint crashValue2;
+} pushConsts;
 
+layout (location = 0) out vec3 outColor;
+layout (location = 1) out vec3 outPos;
+layout (location = 2) out float outTime;
 
 void main() 
 {
     mat4 modelView = ubo.view * ubo.model;
     vec4 pos = modelView * inPos;
-    outColor = inColor;
+    
+    outPos = inPos.xyz;
+    
+    float checker = mod(floor(inPos.x * 5.0) + floor(inPos.z * 5.0), 2.0);
+    vec3 enhancedColor = inColor * (0.7 + 0.3 * checker * pushConsts.colorMod);
+    outColor = enhancedColor;
+    
+    outTime = pushConsts.time * 0.2 + pushConsts.animationTime * pushConsts.pulseSpeed * 0.15;
+    
     gl_Position = ubo.projection * pos;
 }

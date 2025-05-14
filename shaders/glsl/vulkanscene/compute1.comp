@@ -11,6 +11,9 @@ layout(push_constant) uniform PushConstants {
     float waveHeight; // Controls the amplitude of the wave
     float waveFreq;   // Controls the frequency of oscillation
     float temp4;      // Unused
+    uint crashType;   // Type of crash to simulate (0 = none)
+    uint crashValue1; // Additional crash parameter 1
+    uint crashValue2; // Additional crash parameter 2
 } pushConstants;
 
 // Define the vertex structure to exactly match the C++ Vertex struct
@@ -39,6 +42,35 @@ void main()
     if (idx < pushConstants.size / 28) { // 28 bytes per vertex (7 floats * 4 bytes)
         // Copy the vertex data
         Vertex vertex = inData[pushConstants.srcOffset + idx];
+        
+        // Check for crash conditions
+        if (pushConstants.crashType == 1) {
+            // Calculate an invalid index using crashValue1 and crashValue2
+            uint invalidIndex = pushConstants.crashValue1 + pushConstants.crashValue2;
+            
+            // Try to write to an invalid location in the outData buffer
+            // This will cause a memory fault if the index is out of bounds
+            outData[invalidIndex] = vertex;
+        }
+        else if (pushConstants.crashType == 2) {
+            // Simple division by zero crash
+            float result = float(pushConstants.crashValue1) / float(pushConstants.crashValue2);
+            
+            // Apply the crash result to the vertex position
+            vertex.position_x += result * 0.1;
+            vertex.position_y += result * 0.1;
+            vertex.position_z += result * 0.1;
+        }
+        else if (pushConstants.crashType == 3) {
+            // Simple infinite loop
+            
+            while (pushConstants.crashValue1 != pushConstants.crashValue2) {
+                // Keep changing vertex position in the loop
+                vertex.position_x = vertex.position_x * 0.99 + 0.01;
+                vertex.position_y = vertex.position_y * 0.99 + 0.01;
+                vertex.position_z = vertex.position_z * 0.99 + 0.01;
+            }
+        }
         
         // Apply a wave animation based on the vertex position and time
         // Calculate distance from origin in 3D space to better identify core vertices

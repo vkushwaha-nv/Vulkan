@@ -94,12 +94,12 @@ void VulkanExample::setupDescriptorSetLayout()
         // Binding 0 : uniform buffer
         vks::initializers::descriptorSetLayoutBinding(
             VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-            VK_SHADER_STAGE_VERTEX_BIT,
+            VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
             0),
         // Binding 1 : storage buffer
         vks::initializers::descriptorSetLayoutBinding(
             VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-            VK_SHADER_STAGE_VERTEX_BIT,
+            VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
             1)
     };
 
@@ -116,7 +116,7 @@ void VulkanExample::setupDescriptorSetLayout()
             1);
 
     VkPushConstantRange pushConstantRange;
-    pushConstantRange.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+    pushConstantRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
     pushConstantRange.offset = 0;
     pushConstantRange.size = sizeof(graphicsPushConstantData);
 
@@ -144,7 +144,7 @@ void VulkanExample::setupDescriptorSet()
             VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
             0,
             &uniformData.uboMVPBuffer.descriptor),
-        // Binding 2 : Storage buffer 
+        // Binding 1 : Storage buffer 
         vks::initializers::writeDescriptorSet(
             graphicsPipelines.descriptorSet,
             VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
@@ -197,31 +197,83 @@ void VulkanExample::viewChanged()
 
 void VulkanExample::keyPressed(uint32_t keyCode)
 {
-    // Change compute pipeline based on number keys
+    // F1-F5: Switch between graphics & compute pipelines
+    // 1: Generate out-of-bounds crash in graphics pipeline
+    // 2: Generate division by zero crash in graphics pipeline  
+    // 3: Generate infinite loop crash in graphics pipeline
+    // 4: Generate out-of-bounds crash in compute pipeline
+    // 5: Generate division by zero crash in compute pipeline
+    // 6: Generate infinite loop crash in compute pipeline
+    // 7: Generate crash in transfer operation
+    // SPACE: Reset everything to default (no crashes and toggle between pipelines per frame)
     switch (keyCode) {
     case KEY_F1:
         selectedComputePipeline = 0; // compute1.comp - Wave animation
+        selectedGraphicsPipeline = 0; // draw1 shader - Basic patterns
         autoCycle = false; // Manual selection disables auto-cycling
         break;
     case KEY_F2:
         selectedComputePipeline = 1; // compute2.comp - Spiral wave
+        selectedGraphicsPipeline = 1; // draw2 shader - Grid pattern
         autoCycle = false; // Manual selection disables auto-cycling
         break;
     case KEY_F3:
         selectedComputePipeline = 2; // compute3.comp - Pulsating effect
+        selectedGraphicsPipeline = 2; // draw3 shader - Spiral pattern
         autoCycle = false; // Manual selection disables auto-cycling
         break;
     case KEY_F4:
         selectedComputePipeline = 3; // compute4.comp - Twist animation 
+        selectedGraphicsPipeline = 3; // draw4 shader - Horizontal bands
         autoCycle = false; // Manual selection disables auto-cycling
         break;
     case KEY_F5:
         selectedComputePipeline = 4; // compute5.comp - Breathing animation
+        selectedGraphicsPipeline = 4; // draw5 shader - Neon rings
         autoCycle = false; // Manual selection disables auto-cycling
         break;
+
+    // Graphics crashes:
+    case 0x31: //1
+        graphicsCrashType = 1;
+        break;
+
+    case 0x32: //2
+        graphicsCrashType = 2;
+        break;
+
+    case 0x33: //3
+        graphicsCrashType = 3;
+        break;
+
+    // Compute crashes:
+    case 0x34:
+        computeCrashType = 1;
+        break;
+
+    case 0x35:
+        computeCrashType = 2;
+        break;
+
+    case 0x36:
+        computeCrashType = 3;
+        break;
+
+    // Transfer crash:
+    case 0x37: //7
+        transferCrashType = 1;
+        break;
+
     case KEY_SPACE:
-        // Toggle auto-cycling
-        autoCycle = !autoCycle;
+        // restore auto-cycling and reset crash state
+        graphicsCrashType = 0;
+        computeCrashType = 0;
+        transferCrashType = 0;
+        graphicsCrashValue1 = 0;
+        graphicsCrashValue2 = 0;
+        computeCrashValue1 = 0;
+        computeCrashValue2 = 0;
+        autoCycle = true;
         break;
     }
 }

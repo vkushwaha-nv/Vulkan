@@ -19,8 +19,22 @@ public:
     // Selected compute pipeline index (0-4 for pipeline1-pipeline5)
     int selectedComputePipeline = 0;
     
+    // Selected graphics pipeline index (0-4 for pipeline1-pipeline5)
+    int selectedGraphicsPipeline = 0;
+    
     // Auto-cycling between pipelines
     bool autoCycle = true;
+    
+    // Controls whether to generate a crash
+    uint32_t graphicsCrashType = 0;
+    uint32_t computeCrashType = 0;
+    uint32_t transferCrashType = 0;
+    
+    // Additional crash parameters
+    uint32_t graphicsCrashValue1 = 0;
+    uint32_t graphicsCrashValue2 = 0;
+    uint32_t computeCrashValue1 = 0;
+    uint32_t computeCrashValue2 = 0;
     
     // Synchronization primitives
     VkSemaphore graphicsReady = VK_NULL_HANDLE;
@@ -46,11 +60,21 @@ public:
         float waveHeight; // Wave height/amplitude
         float waveFreq;   // Wave frequency
         float temp4;      // Unused
+        uint32_t crashType; // Type of crash to simulate (0 = none)
+        uint32_t crashValue1; // Additional crash parameter 1
+        uint32_t crashValue2; // Additional crash parameter 2
     } computePushConstantData;
 
     struct {
-        uint32_t addressHi;
-        uint32_t addressLo;
+        float time;
+        float animationTime;
+        float colorMod;
+        float colorShift;
+        float pulseSpeed;
+        float colorIntensity;
+        uint32_t crashType; // Type of crash to simulate (0 = none)
+        uint32_t crashValue1; // Additional crash parameter 1
+        uint32_t crashValue2; // Additional crash parameter 2
     } graphicsPushConstantData;
 
     // Compute pipeline
