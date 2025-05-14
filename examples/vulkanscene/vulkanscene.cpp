@@ -195,6 +195,25 @@ void VulkanExample::viewChanged()
     updateUniformBuffers();
 }
 
+// Enable physical device features required for this example
+void VulkanExample::getEnabledFeatures()
+{
+    // Enable vertex pipeline stores and atomics for storage buffer operations in vertex shader
+    if (deviceFeatures.vertexPipelineStoresAndAtomics) {
+        enabledFeatures.vertexPipelineStoresAndAtomics = VK_TRUE;
+    }
+
+    // Enable fill mode non-solid for wireframe rendering
+    if (deviceFeatures.fillModeNonSolid) {
+        enabledFeatures.fillModeNonSolid = VK_TRUE;
+    }
+
+    // Enable anisotropic filtering if supported
+    if (deviceFeatures.samplerAnisotropy) {
+        enabledFeatures.samplerAnisotropy = VK_TRUE;
+    }
+}
+
 void VulkanExample::keyPressed(uint32_t keyCode)
 {
     /*

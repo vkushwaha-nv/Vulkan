@@ -269,10 +269,11 @@ void VulkanExample::prepare()
     setupDescriptorSetLayout();
     prepareGraphicsPipelines();
     setupDescriptorPool();
+    createBuffers();
+
     setupDescriptorSet();
 
     //----------------VKKK--------------------------
-    createBuffers();
     prepareCompute();
     createCommandPoolAndBuffers();
 

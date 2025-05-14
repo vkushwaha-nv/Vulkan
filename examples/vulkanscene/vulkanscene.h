@@ -165,6 +165,7 @@ public:
     void prepare();
     virtual void render();
     virtual void viewChanged();
+    virtual void getEnabledFeatures();
     virtual void keyPressed(uint32_t keyCode);
 };
 
