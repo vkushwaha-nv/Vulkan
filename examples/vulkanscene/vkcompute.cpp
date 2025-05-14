@@ -72,8 +72,9 @@ void VulkanExample::addDispatch(VkCommandBuffer cmdBuffer, uint32_t size_x, uint
             computePipelines.pipeline2,
             computePipelines.pipeline3,
             computePipelines.pipeline4,
+            computePipelines.pipeline5,
         };
-        vkCmdBindPipeline(cmdBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, crash ? computePipelines.pipeline5 : pipelineArray[0]);
+        vkCmdBindPipeline(cmdBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipelineArray[selectedComputePipeline]);
     }
 
     // Bind the single descriptor set
@@ -83,6 +84,7 @@ void VulkanExample::addDispatch(VkCommandBuffer cmdBuffer, uint32_t size_x, uint
     {
         computePushConstantData.srcOffset = 0;
         computePushConstantData.dstOffset = 0;
+        
         if (crash) {
             uint64_t bufferAddress = GetBufferDeviceAddress(sboBuffers.ssboData.buffer);
             computePushConstantData.srcOffset = bufferAddress >> 32;
@@ -99,8 +101,13 @@ void VulkanExample::addDispatch(VkCommandBuffer cmdBuffer, uint32_t size_x, uint
         computePushConstantData.waveFreq = 0.4f;     // Lower frequency for gentler waves
         computePushConstantData.temp4 = 0.0f;        // Not used
         
-        vkCmdPushConstants(cmdBuffer,  computePipelines.pipelineLayout, VK_SHADER_STAGE_COMPUTE_BIT, 0,
-            sizeof(computePushConstantData), &computePushConstantData);
+        vkCmdPushConstants(
+            cmdBuffer,
+            computePipelines.pipelineLayout,
+            VK_SHADER_STAGE_COMPUTE_BIT,
+            0,
+            sizeof(computePushConstantData),
+            &computePushConstantData);
     }
 
     uint32_t launchSizeX = (vertexDataSize + 31) / 32;  // Round up to next multiple of 32

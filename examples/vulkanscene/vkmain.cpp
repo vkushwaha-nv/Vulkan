@@ -292,6 +292,12 @@ void VulkanExample::prepare()
 
 void VulkanExample::draw()
 {
+    // Handle auto-cycling between animation patterns
+    if (autoCycle) {
+        // Change animation every frame
+        selectedComputePipeline = currentFrameCounter % 5;
+    }
+    
     buildGraphicsCommandBuffers(1 << currentBuffer);
     buildTransferCommandBuffers(1 << currentBuffer);
     buildComputeCommandBuffers(1 << currentBuffer);

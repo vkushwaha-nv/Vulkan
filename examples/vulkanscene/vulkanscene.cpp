@@ -13,6 +13,7 @@
 #include "vulkanexamplebase.h"
 #include "VulkanglTFModel.h"
 #include "vulkanscene.h"
+#include "keycodes.hpp"
 
 VulkanExample::VulkanExample() : VulkanExampleBase(ENABLE_VALIDATION)
 {
@@ -192,6 +193,37 @@ void VulkanExample::render()
 void VulkanExample::viewChanged()
 {
     updateUniformBuffers();
+}
+
+void VulkanExample::keyPressed(uint32_t keyCode)
+{
+    // Change compute pipeline based on number keys
+    switch (keyCode) {
+    case KEY_F1:
+        selectedComputePipeline = 0; // compute1.comp - Wave animation
+        autoCycle = false; // Manual selection disables auto-cycling
+        break;
+    case KEY_F2:
+        selectedComputePipeline = 1; // compute2.comp - Spiral wave
+        autoCycle = false; // Manual selection disables auto-cycling
+        break;
+    case KEY_F3:
+        selectedComputePipeline = 2; // compute3.comp - Pulsating effect
+        autoCycle = false; // Manual selection disables auto-cycling
+        break;
+    case KEY_F4:
+        selectedComputePipeline = 3; // compute4.comp - Twist animation 
+        autoCycle = false; // Manual selection disables auto-cycling
+        break;
+    case KEY_F5:
+        selectedComputePipeline = 4; // compute5.comp - Breathing animation
+        autoCycle = false; // Manual selection disables auto-cycling
+        break;
+    case KEY_SPACE:
+        // Toggle auto-cycling
+        autoCycle = !autoCycle;
+        break;
+    }
 }
 
 VULKAN_EXAMPLE_MAIN()

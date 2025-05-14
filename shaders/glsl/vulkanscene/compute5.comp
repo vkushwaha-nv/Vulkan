@@ -1,55 +1,87 @@
 #version 450
 #extension GL_EXT_shader_explicit_arithmetic_types_int64 : require
-#extension GL_EXT_buffer_reference : require
-#extension GL_EXT_buffer_reference_uvec2 : require
 
-layout (local_size_x = 256, local_size_y = 1) in;
+layout (local_size_x = 32, local_size_y = 1) in;
 
 layout(push_constant) uniform PushConstants {
-   uint srcOffset;
-   uint dstOffset;
-   uint size;
-   float temp1;
-   float temp2;
-   float temp3;
-   float temp4;
+    uint srcOffset;
+    uint dstOffset;
+    uint size;
+    float time;       // Animation time parameter
+    float waveHeight; // Controls the amplitude of the wave
+    float waveFreq;   // Controls the frequency of oscillation
+    float temp4;      // Unused
 } pushConstants;
 
-layout(buffer_reference) buffer VKKK;
-layout(buffer_reference, buffer_reference_align = 4, std430) buffer VKKK
-{
-    uint m0[];
+// Define the vertex structure to exactly match the C++ Vertex struct
+// In C++: struct Vertex { float position[4]; float color[3]; };
+struct Vertex {
+    float position_x;
+    float position_y;
+    float position_z;
+    float position_w;
+    float color_r;
+    float color_g;
+    float color_b;
 };
-        
+
 layout(std430, binding=0) buffer ReadData {
-    uint inData[];
+    Vertex inData[];
 };
 
 layout(std430, binding=1) buffer WriteData {
-    uint outData[];
+    Vertex outData[];
 };
-
-layout (binding = 2, rgba8) uniform image2D image1;
-layout (binding = 3, rgba8) uniform image2D image2;
-
-
 
 void main()
 {
-    if (gl_GlobalInvocationID.x < pushConstants.size) {
-        uint srcValue = inData[pushConstants.srcOffset + gl_GlobalInvocationID.x];
-        uint dstValue = srcValue;
-        dstValue += dstValue + int(100*sin(pushConstants.temp1));
-        dstValue += dstValue + int(100*cos(pushConstants.temp2));
-        dstValue += dstValue + int(10*cos(pushConstants.temp3));
-        dstValue += dstValue + int(56*sin(pushConstants.temp4));
+    uint idx = gl_GlobalInvocationID.x;
+    if (idx < pushConstants.size / 28) { // 28 bytes per vertex (7 floats * 4 bytes)
+        // Copy the vertex data
+        Vertex vertex = inData[pushConstants.srcOffset + idx];
         
-        uvec2 address = uvec2(pushConstants.srcOffset, pushConstants.dstOffset);
-        VKKK(address).m0[0] = dstValue;
-
-        uint x = gl_GlobalInvocationID.x % 1024; // tex is 1024x1024
-        uint y = gl_GlobalInvocationID.y % 1024; // tex is 1024x1024
-        vec4 res = imageLoad(image1, ivec2(x, y));
-        imageStore(image2, ivec2(x, y), res);
+        // Calculate distance from center
+        float distFromCenter = length(vec3(vertex.position_x, vertex.position_y, vertex.position_z));
+        
+        // Apply a threshold to prevent core vertices from moving
+        float coreThreshold = 10.0;
+        
+        if (distFromCenter > coreThreshold) {
+            // Get original vertex position
+            vec3 originalPos = vec3(vertex.position_x, vertex.position_y, vertex.position_z);
+            
+            // Normalized direction vector from origin to vertex
+            vec3 direction = normalize(originalPos);
+            
+            // Create breathing/pulsing effect
+            float breathingFreq = 0.8; // Slower breathing rate
+            float breathingPhase = pushConstants.time * breathingFreq;
+            
+            // Create a breathing cycle that goes from -1 to 1 instead of 0 to 1
+            // This ensures we have both contraction and expansion
+            float breathingCycle = cos(breathingPhase);
+            
+            // Apply different rates of breathing based on vertex color
+            // This creates variations in the animation across different cube faces
+            float colorFactor = 1.0 + 0.2 * (vertex.color_r + vertex.color_g + vertex.color_b) / 3.0;
+            breathingCycle *= colorFactor;
+            
+            // Calculate distance-based attenuation
+            float attenuation = clamp((distFromCenter - coreThreshold) / 15.0, 0.0, 1.0);
+            
+            // Calculate amplitude factor
+            float amplitudeFactor = 0.02 * pushConstants.waveHeight * attenuation;
+            
+            // Calculate the movement offset - now properly contracts when breathingCycle is negative
+            vec3 moveVec = direction * breathingCycle * amplitudeFactor * distFromCenter;
+            
+            // Apply the movement to the vertex
+            vertex.position_x += moveVec.x;
+            vertex.position_y += moveVec.y; 
+            vertex.position_z += moveVec.z;
+        }
+        
+        // Output the modified vertex
+        outData[pushConstants.dstOffset + idx] = vertex;
     }
 }

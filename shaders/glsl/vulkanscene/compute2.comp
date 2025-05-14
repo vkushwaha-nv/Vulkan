@@ -1,43 +1,81 @@
 #version 450
 #extension GL_EXT_shader_explicit_arithmetic_types_int64 : require
 
-layout (local_size_x = 64, local_size_y = 1) in;
+layout (local_size_x = 32, local_size_y = 1) in;
 
 layout(push_constant) uniform PushConstants {
-   uint srcOffset;
-   uint dstOffset;
-   uint size;
-   float temp1;
-   float temp2;
-   float temp3;
-   float temp4;
+    uint srcOffset;
+    uint dstOffset;
+    uint size;
+    float time;       // Animation time parameter
+    float waveHeight; // Controls the amplitude of the wave
+    float waveFreq;   // Controls the frequency of oscillation
+    float temp4;      // Unused
 } pushConstants;
 
+// Define the vertex structure to exactly match the C++ Vertex struct
+// In C++: struct Vertex { float position[4]; float color[3]; };
+struct Vertex {
+    float position_x;
+    float position_y;
+    float position_z;
+    float position_w;
+    float color_r;
+    float color_g;
+    float color_b;
+};
 
 layout(std430, binding=0) buffer ReadData {
-    uint inData[];
+    Vertex inData[];
 };
 
 layout(std430, binding=1) buffer WriteData {
-    uint outData[];
+    Vertex outData[];
 };
-
-layout (binding = 2, rgba8) uniform image2D image1;
-layout (binding = 3, rgba8) uniform image2D image2;
-
 
 void main()
 {
-    if (gl_GlobalInvocationID.x < pushConstants.size) {
-        uint srcValue = inData[pushConstants.srcOffset + gl_GlobalInvocationID.x];
-        uint dstValue = srcValue;
-        dstValue += dstValue + int(100*sin(pushConstants.temp1));
-        dstValue += dstValue + int(100*cos(pushConstants.temp2));
-        outData[pushConstants.dstOffset + gl_GlobalInvocationID.x] = dstValue;
-
-        uint x = gl_GlobalInvocationID.x % 1024; // tex is 1024x1024
-        uint y = gl_GlobalInvocationID.y % 1024; // tex is 1024x1024
-        vec4 res = imageLoad(image1, ivec2(x, y));
-        imageStore(image2, ivec2(x, y), res);
+    uint idx = gl_GlobalInvocationID.x;
+    if (idx < pushConstants.size / 28) { // 28 bytes per vertex (7 floats * 4 bytes)
+        // Copy the vertex data
+        Vertex vertex = inData[pushConstants.srcOffset + idx];
+        
+        // Calculate distance from center
+        float distFromCenter = length(vec3(vertex.position_x, vertex.position_y, vertex.position_z));
+        
+        // Apply a threshold to prevent core vertices from moving
+        float coreThreshold = 10.0; // Same as compute1.comp
+        
+        if (distFromCenter > coreThreshold) {
+            // Create a spiral wave pattern
+            // Calculate angle in XZ plane
+            float angle = atan(vertex.position_z, vertex.position_x);
+            
+            // Create a spiral wave effect
+            float spiral = sin(angle * 5.0 + pushConstants.time * 2.0);
+            float radialWave = sin(distFromCenter * 0.2 - pushConstants.time * 3.0);
+            
+            // Combine spiral and radial waves
+            float combinedWave = spiral * radialWave * 0.5;
+            
+            // Apply distance-based attenuation
+            float attenuation = clamp((distFromCenter - coreThreshold) / 20.0, 0.0, 1.0);
+            
+            // Create a subtle reset cycle using sine
+            float resetCycle = sin(pushConstants.time * 0.2) * 0.5 + 0.5;
+            
+            // Calculate final wave height
+            float waveEffect = combinedWave * pushConstants.waveHeight * attenuation * resetCycle;
+            
+            // Apply the wave effect primarily to the Y-coordinate for vertical motion
+            vertex.position_y += waveEffect * 1.0;
+            
+            // Also add some subtle horizontal motion
+            vertex.position_x += waveEffect * 0.3 * sin(angle + pushConstants.time);
+            vertex.position_z += waveEffect * 0.3 * cos(angle + pushConstants.time);
+        }
+        
+        // Output the modified vertex
+        outData[pushConstants.dstOffset + idx] = vertex;
     }
 }

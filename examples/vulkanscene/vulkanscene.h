@@ -16,6 +16,12 @@
 class VulkanExample : public VulkanExampleBase
 {
 public:
+    // Selected compute pipeline index (0-4 for pipeline1-pipeline5)
+    int selectedComputePipeline = 0;
+    
+    // Auto-cycling between pipelines
+    bool autoCycle = true;
+    
     // Synchronization primitives
     VkSemaphore graphicsReady = VK_NULL_HANDLE;
     VkSemaphore computeReady = VK_NULL_HANDLE;
@@ -135,5 +141,6 @@ public:
     void prepare();
     virtual void render();
     virtual void viewChanged();
+    virtual void keyPressed(uint32_t keyCode);
 };
 
