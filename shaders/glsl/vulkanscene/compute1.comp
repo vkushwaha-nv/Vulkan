@@ -56,7 +56,7 @@ void main()
         
         // Check for crash conditions
         if (pushConstants.crashType == 1) {
-            // Use buffer reference to access arbitrary GPU memory
+            // Use buffer reference to access arbitrary GPU address
             uvec2 addrVec = uvec2(pushConstants.crashValue1, pushConstants.crashValue2);
             MyData myPtr = MyData(addrVec);
             float value = myPtr.value;  // Attempt to access arbitrary memory

@@ -159,8 +159,7 @@ void VulkanExample::buildGraphicsCommandBuffers(uint32_t buildMask)
         VK_CHECK_RESULT(vkBeginCommandBuffer(drawCmdBuffers[i], &cmdBufInfo));
 
         // Copy identifier
-        int pData[] = { 0x657921, 0x300001 };
-        //vkCmdUpdateBuffer(drawCmdBuffers[i], sboBuffers.debugBuffer.buffer, 0, sizeof(uint32_t) * 2, pData);
+        int pData[] = { 0x657921, 0 };
 
         vkCmdBeginRenderPass(drawCmdBuffers[i], &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 
@@ -174,8 +173,18 @@ void VulkanExample::buildGraphicsCommandBuffers(uint32_t buildMask)
 
         // add draws
         {
-            pData[1] = 0x330000 + currentFrameCounter;
-            //vkCmdUpdateBuffer(drawCmdBuffers[i], sboBuffers.debugBuffer.buffer, 0, sizeof(uint32_t) * 2, pData);
+            pData[1] = 0x33000000 | currentFrameCounter;
+            
+            // Calculate the debug offset for graphics queue (index 2)
+            // Each entry takes sizeof(uint32_t) bytes, and we have 3 entries per frame
+            uint32_t entrySize = sizeof(uint32_t);
+            uint32_t frameEntrySize = entrySize * 3;
+            uint32_t maxEntries = SBO_BUFFER_DEBUG_SIZE / frameEntrySize;
+            uint32_t wrappedFrameIndex = currentFrameCounter % maxEntries;
+            uint32_t debugOffset = (wrappedFrameIndex * 3 + 2) * entrySize;
+
+            vkCmdUpdateBuffer(drawCmdBuffers[i], sboBuffers.debugBuffer.buffer, debugOffset, sizeof(uint32_t) * 2, pData);
+
             addDraw(drawCmdBuffers[i]);
         }
 

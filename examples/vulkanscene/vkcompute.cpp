@@ -142,10 +142,21 @@ void VulkanExample::buildComputeCommandBuffers(uint32_t buildMask)
         int pData[] = { 0x657921, 0 };
 
         //add some copies on compute queue
+        //pData[1] = 0x22000000 + currentFrameCounter;
         //addCopyCommands(computeCmdBuffers[i], 1 /* num copies */, SBO_BUFFER_MAX_SIZE/(1024 * 1024));
 
-        pData[1] = 0x22000000 + currentFrameCounter;
-        vkCmdUpdateBuffer(computeCmdBuffers[i], sboBuffers.debugBuffer.buffer, 0, sizeof(uint32_t) * 2, pData);
+        pData[1] = 0x22000000 | currentFrameCounter;
+        
+        // Calculate the debug offset for compute queue (index 1)
+        // Each entry takes sizeof(uint32_t) bytes, and we have 3 entries per frame
+        uint32_t entrySize = sizeof(uint32_t);
+        uint32_t frameEntrySize = entrySize * 3;
+        uint32_t maxEntries = SBO_BUFFER_DEBUG_SIZE / frameEntrySize;
+        uint32_t wrappedFrameIndex = currentFrameCounter % maxEntries;
+        uint32_t debugOffset = (wrappedFrameIndex * 3 + 1) * entrySize;
+        
+        vkCmdUpdateBuffer(computeCmdBuffers[i], sboBuffers.debugBuffer.buffer, debugOffset, sizeof(uint32_t) * 2, pData);
+        
         addDispatch(computeCmdBuffers[i], 10, 10, 10);
 
  

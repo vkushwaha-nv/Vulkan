@@ -3,7 +3,7 @@
 #define MAX_DRAW_FRAMES 0 // 0 = INF
 
 #define SBO_BUFFER_DATA_SIZE (1 * 1024 * 1024ULL)
-#define SBO_BUFFER_DEBUG_SIZE (32 * 1024 * 1024ULL)
+#define SBO_BUFFER_DEBUG_SIZE (1 * 1024 * 1024ULL)
 
 #define NUM_MAX_VERTICES (512 * 1024ULL)
 #define NUM_MAX_VERTICES_FILL_SIZE (1024ULL) // must be a multiple of NUM_MAX_VERTICES
@@ -13,9 +13,30 @@
 #define NUM_DESCRIPTOR_SETS     5
 #define NUM_COMPUTE_PIPELINES   5
 
+// Operation type enum for specifying which pipeline to trigger a crash in
+enum class OperationType {
+    Graphics,
+    Compute,
+    Transfer
+};
+
+// Crash type enum for specifying what kind of crash to trigger
+enum class CrashType {
+    None = 0,
+    AccessAddressZero = 1,    // Access virtual address 0
+    InfiniteLoop = 2,         // Generate infinite loop
+    OutOfBounds = 3,          // Access out of bounds memory
+    DivisionByZero = 4        // Division by zero
+};
+
 class VulkanExample : public VulkanExampleBase
 {
 public:
+
+    // New functions:
+    PFN_vkGetBufferDeviceAddressKHR vkGetBufferDeviceAddressKHR;
+    VkPhysicalDeviceBufferDeviceAddressFeatures enabledBufferDeviceAddresFeatures{};
+
     // Selected compute pipeline index (0-4 for pipeline1-pipeline5)
     int selectedComputePipeline = 0;
     
@@ -29,13 +50,7 @@ public:
     uint32_t graphicsCrashType = 0;
     uint32_t computeCrashType = 0;
     uint32_t transferCrashType = 0;
-    
-    // Additional crash parameters
-    uint32_t graphicsCrashValue1 = 0;
-    uint32_t graphicsCrashValue2 = 0;
-    uint32_t computeCrashValue1 = 0;
-    uint32_t computeCrashValue2 = 0;
-    
+
     // Synchronization primitives
     VkSemaphore graphicsReady = VK_NULL_HANDLE;
     VkSemaphore computeReady = VK_NULL_HANDLE;
@@ -157,6 +172,7 @@ public:
     void addDispatch(VkCommandBuffer cmdBuffer, uint32_t size_x, uint32_t size_y, uint32_t size_z);
     void buildComputeCommandBuffers(uint32_t buildMask);
     void destroyCommandBuffers();
+    void logToStdout();
     // ------------------------------------------------------------------
 
 
@@ -167,5 +183,9 @@ public:
     virtual void viewChanged();
     virtual void getEnabledFeatures();
     virtual void keyPressed(uint32_t keyCode);
+
+    // Crash triggering function
+    void TriggerCrash(OperationType opType, CrashType crashType);
+
 };
 
