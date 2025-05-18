@@ -99,21 +99,17 @@ void VulkanExample::addDispatch(VkCommandBuffer cmdBuffer, uint32_t size_x, uint
 
         // Set crash type from the class variable
         computePushConstantData.crashType = computeCrashType;
-        if (computePushConstantData.crashType == 1) { // Access address 0
+        if (computePushConstantData.crashType == static_cast<uint32_t>(CrashType::AccessAddressZero)) {
             computePushConstantData.crashValue1 = 0;
             computePushConstantData.crashValue2 = 0;
         }
-        else if (computePushConstantData.crashType == 2) { // Cause inf loop
+        else if (computePushConstantData.crashType == static_cast<uint32_t>(CrashType::InfiniteLoop)) {
             computePushConstantData.crashValue1 = 100;
             computePushConstantData.crashValue2 = 100;
         }
-        else if (computePushConstantData.crashType == 3) { // Cause Out of bounds crash
+        else if (computePushConstantData.crashType == static_cast<uint32_t>(CrashType::OutOfBounds)) {
             computePushConstantData.crashValue1 = 1024 * 1024 * 1024U;
-            computePushConstantData.crashValue1 = 1024 * 1024 * 1024U;
-        }
-        else if (computePushConstantData.crashType == 4) { // Cause div by 0 crash
-            computePushConstantData.crashValue1 = 20;
-            computePushConstantData.crashValue2 = 0;
+            computePushConstantData.crashValue2 = 1024 * 1024 * 1024U;
         }
 
         vkCmdPushConstants(
@@ -139,8 +135,8 @@ void VulkanExample::buildComputeCommandBuffers(uint32_t buildMask)
         }
         VK_CHECK_RESULT(vkBeginCommandBuffer(computeCmdBuffers[i], &cmdBufInfo));
 
-        int pData[] = { 0x657921, 0 };
-
+        int pData[] = { 0x77777777, 0 };
+  
         //add some copies on compute queue
         //pData[1] = 0x22000000 + currentFrameCounter;
         //addCopyCommands(computeCmdBuffers[i], 1 /* num copies */, SBO_BUFFER_MAX_SIZE/(1024 * 1024));

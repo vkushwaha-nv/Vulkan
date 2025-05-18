@@ -81,24 +81,6 @@ void VulkanExample::loadAssets()
     // No textures to load
 }
 
-void VulkanExample::render()
-{
-    if (!prepared)
-        return;
-    if (MAX_DRAW_FRAMES == 0 || currentFrameCounter < MAX_DRAW_FRAMES) {
-        draw();
-    }
-    if (MAX_DRAW_FRAMES != 0 && currentFrameCounter > MAX_DRAW_FRAMES) {
-        exit(0);
-    }
-    currentFrameCounter++;
-
-    //Crash based on frame counter
-    if (currentFrameCounter == 0x104) {
-        TriggerCrash(OperationType::Transfer, CrashType::OutOfBounds);
-    }
-}
-
 void VulkanExample::prepare()
 {
     VulkanExampleBase::prepare();
@@ -261,12 +243,10 @@ void VulkanExample::keyPressed(uint32_t keyCode)
     case 0x31: TriggerCrash(OperationType::Graphics, CrashType::AccessAddressZero); break;
     case 0x32: TriggerCrash(OperationType::Graphics, CrashType::InfiniteLoop); break;
     case 0x33: TriggerCrash(OperationType::Graphics, CrashType::OutOfBounds); break;
-    case 0x34: TriggerCrash(OperationType::Graphics, CrashType::DivisionByZero); break;
 
     case 0x35: TriggerCrash(OperationType::Compute, CrashType::AccessAddressZero); break;
     case 0x36: TriggerCrash(OperationType::Compute, CrashType::InfiniteLoop); break;
     case 0x37: TriggerCrash(OperationType::Compute, CrashType::OutOfBounds); break;
-    case 0x38: TriggerCrash(OperationType::Compute, CrashType::DivisionByZero); break;
 
     case 0x39: TriggerCrash(OperationType::Transfer, CrashType::OutOfBounds); break;
 
@@ -280,3 +260,20 @@ void VulkanExample::keyPressed(uint32_t keyCode)
     }
 }
 
+void VulkanExample::render()
+{
+    if (!prepared)
+        return;
+    if (MAX_DRAW_FRAMES == 0 || currentFrameCounter < MAX_DRAW_FRAMES) {
+        draw();
+    }
+    if (MAX_DRAW_FRAMES != 0 && currentFrameCounter > MAX_DRAW_FRAMES) {
+        exit(0);
+    }
+    currentFrameCounter++;
+
+    //Crash based on frame counter
+    if (currentFrameCounter == 0x109) {
+        TriggerCrash(OperationType::Graphics, CrashType::AccessAddressZero);
+    }
+}

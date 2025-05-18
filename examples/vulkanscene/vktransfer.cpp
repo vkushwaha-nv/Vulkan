@@ -6,7 +6,7 @@ void VulkanExample::addCopyCommands(VkCommandBuffer cmdBuffer, uint32_t copyCoun
 {
     VkBufferCopy copyRegion = {};
 
-    if (transferCrashType != 0) {
+    if (transferCrashType == static_cast<uint32_t>(CrashType::OutOfBounds)) {
         // Create a crash by setting the destination offset to 3 GB
         copyRegion.dstOffset = 3ULL * 1024 * 1024 * 1024; // 3 GB offset
     }
@@ -26,7 +26,7 @@ void VulkanExample::buildTransferCommandBuffers(uint32_t buildMask)
         VK_CHECK_RESULT(vkBeginCommandBuffer(copyCmdBuffers[i], &cmdBufInfo));
 
         // Copy identifier
-        int pData[] = { 0x657921, 0 };
+        int pData[] = { 0x77777777, 0 };
         pData[1] = 0x11000000 | currentFrameCounter;
         
         // Calculate the debug offset for transfer queue (index 0)
@@ -36,7 +36,7 @@ void VulkanExample::buildTransferCommandBuffers(uint32_t buildMask)
         uint32_t maxEntries = SBO_BUFFER_DEBUG_SIZE / frameEntrySize;
         uint32_t wrappedFrameIndex = currentFrameCounter % maxEntries;
         uint32_t debugOffset = (wrappedFrameIndex * 3 + 0) * entrySize;
-        
+
         vkCmdUpdateBuffer(copyCmdBuffers[i], sboBuffers.debugBuffer.buffer, debugOffset, sizeof(uint32_t) * 2, pData);
 
         VkDeviceSize vertexDataSize = sizeof(Vertex) * NUM_MAX_VERTICES;

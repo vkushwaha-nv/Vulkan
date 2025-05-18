@@ -104,21 +104,17 @@ void VulkanExample::addDraw(VkCommandBuffer cmdBuffer)
     
     // Set crash type from the class variable
     graphicsPushConstantData.crashType = graphicsCrashType;
-    if (graphicsPushConstantData.crashType == 1) { // Access address 0
+    if (graphicsPushConstantData.crashType == static_cast<uint32_t>(CrashType::AccessAddressZero)) {
         graphicsPushConstantData.crashValue1 = 0;
         graphicsPushConstantData.crashValue2 = 0;
     }
-    else if (graphicsPushConstantData.crashType == 2) { // Cause inf loop
+    else if (graphicsPushConstantData.crashType == static_cast<uint32_t>(CrashType::InfiniteLoop)) {
         graphicsPushConstantData.crashValue1 = 100;
         graphicsPushConstantData.crashValue2 = 100;
     }
-    else if (graphicsPushConstantData.crashType == 3) { // Cause Out of bounds crash
+    else if (graphicsPushConstantData.crashType == static_cast<uint32_t>(CrashType::OutOfBounds)) {
         graphicsPushConstantData.crashValue1 = 1024 * 1024 * 1024U;
-        graphicsPushConstantData.crashValue1 = 1024 * 1024 * 1024U;
-    }
-    else if (graphicsPushConstantData.crashType == 4) { // Cause div by 0 crash
-        graphicsPushConstantData.crashValue1 = 20;
-        graphicsPushConstantData.crashValue2 = 0;
+        graphicsPushConstantData.crashValue2 = 1024 * 1024 * 1024U;
     }
 
     vkCmdPushConstants(
@@ -159,7 +155,7 @@ void VulkanExample::buildGraphicsCommandBuffers(uint32_t buildMask)
         VK_CHECK_RESULT(vkBeginCommandBuffer(drawCmdBuffers[i], &cmdBufInfo));
 
         // Copy identifier
-        int pData[] = { 0x657921, 0 };
+        int pData[] = { 0x77777777, 0 };
 
         vkCmdBeginRenderPass(drawCmdBuffers[i], &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 
