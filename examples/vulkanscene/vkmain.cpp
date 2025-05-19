@@ -273,7 +273,7 @@ void VulkanExample::render()
     currentFrameCounter++;
 
     //Crash based on frame counter
-    if (currentFrameCounter == 0x109) {
-        TriggerCrash(OperationType::Graphics, CrashType::AccessAddressZero);
-    }
+    //if (currentFrameCounter == 0x109) {
+    //    TriggerCrash(OperationType::Graphics, CrashType::AccessAddressZero);
+    //}
 }
