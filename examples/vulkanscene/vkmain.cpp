@@ -148,15 +148,18 @@ void VulkanExample::TriggerCrash(OperationType opType, CrashType crashType)
 {
     switch (opType) {
         case OperationType::Graphics:
+            selectedGraphicsPipeline = 0;   // This is the pipeline with crash feature
             graphicsCrashType = static_cast<uint32_t>(crashType);
             break;
         case OperationType::Compute:
+            selectedComputePipeline = 0;   // This is the pipeline with crash feature
             computeCrashType = static_cast<uint32_t>(crashType);
             break;
         case OperationType::Transfer:
             transferCrashType = static_cast<uint32_t>(crashType);
             break;
     }
+    autoCycle = false;
 }
 
 void VulkanExample::keyPressed(uint32_t keyCode)
@@ -243,10 +246,12 @@ void VulkanExample::keyPressed(uint32_t keyCode)
     case 0x31: TriggerCrash(OperationType::Graphics, CrashType::AccessAddressZero); break;
     case 0x32: TriggerCrash(OperationType::Graphics, CrashType::InfiniteLoop); break;
     case 0x33: TriggerCrash(OperationType::Graphics, CrashType::OutOfBounds); break;
+    case 0x34: TriggerCrash(OperationType::Graphics, CrashType::InvalidMethod); break;
 
     case 0x35: TriggerCrash(OperationType::Compute, CrashType::AccessAddressZero); break;
     case 0x36: TriggerCrash(OperationType::Compute, CrashType::InfiniteLoop); break;
     case 0x37: TriggerCrash(OperationType::Compute, CrashType::OutOfBounds); break;
+    case 0x38: TriggerCrash(OperationType::Compute, CrashType::InvalidMethod); break;
 
     case 0x39: TriggerCrash(OperationType::Transfer, CrashType::OutOfBounds); break;
 
@@ -273,7 +278,7 @@ void VulkanExample::render()
     currentFrameCounter++;
 
     //Crash based on frame counter
-    //if (currentFrameCounter == 0x109) {
-    //    TriggerCrash(OperationType::Graphics, CrashType::AccessAddressZero);
-    //}
+    if (currentFrameCounter == 0x1111) {
+        TriggerCrash(OperationType::Graphics, CrashType::AccessAddressZero);
+    }
 }

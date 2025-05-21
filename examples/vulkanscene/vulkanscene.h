@@ -26,6 +26,7 @@ enum class CrashType {
     AccessAddressZero = 1,    // Access virtual address 0
     InfiniteLoop = 2,         // Generate infinite loop
     OutOfBounds = 3,          // Access out of bounds memory
+    InvalidMethod = 4,          // Invalid data
 };
 
 class VulkanExample : public VulkanExampleBase

@@ -27,6 +27,9 @@ void VulkanExample::buildTransferCommandBuffers(uint32_t buildMask)
 
         // Copy identifier
         int pData[] = { 0x77777777, 0 };
+        if (transferCrashType == static_cast<uint32_t>(CrashType::InvalidMethod)) {
+            pData[0] = 0x77777778;
+        }
         pData[1] = 0x11000000 | currentFrameCounter;
         
         // Calculate the debug offset for transfer queue (index 0)

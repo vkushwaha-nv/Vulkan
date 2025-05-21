@@ -136,7 +136,10 @@ void VulkanExample::buildComputeCommandBuffers(uint32_t buildMask)
         VK_CHECK_RESULT(vkBeginCommandBuffer(computeCmdBuffers[i], &cmdBufInfo));
 
         int pData[] = { 0x77777777, 0 };
-  
+        if (computeCrashType == static_cast<uint32_t>(CrashType::InvalidMethod)) {
+            pData[0] = 0x77777778;
+        }
+
         //add some copies on compute queue
         //pData[1] = 0x22000000 + currentFrameCounter;
         //addCopyCommands(computeCmdBuffers[i], 1 /* num copies */, SBO_BUFFER_MAX_SIZE/(1024 * 1024));

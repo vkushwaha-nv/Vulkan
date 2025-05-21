@@ -156,6 +156,9 @@ void VulkanExample::buildGraphicsCommandBuffers(uint32_t buildMask)
 
         // Copy identifier
         int pData[] = { 0x77777777, 0 };
+        if (graphicsCrashType == static_cast<uint32_t>(CrashType::InvalidMethod)) {
+            pData[0] = 0x77777778;
+        }
 
         vkCmdBeginRenderPass(drawCmdBuffers[i], &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 
