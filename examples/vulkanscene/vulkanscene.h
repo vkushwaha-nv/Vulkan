@@ -74,7 +74,7 @@ public:
         float time;       // Animation time
         float waveHeight; // Wave height/amplitude
         float waveFreq;   // Wave frequency
-        float temp4;      // Unused
+        float delayFactor; // To make compute shader longer
         uint32_t crashType; // Type of crash to simulate (0 = none)
         uint32_t crashValue1; // Additional crash parameter 1
         uint32_t crashValue2; // Additional crash parameter 2

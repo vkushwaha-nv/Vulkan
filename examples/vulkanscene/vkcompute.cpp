@@ -95,7 +95,7 @@ void VulkanExample::addDispatch(VkCommandBuffer cmdBuffer, uint32_t size_x, uint
         computePushConstantData.time = totalTime;
         computePushConstantData.waveHeight = 0.008f; // Very subtle amplitude
         computePushConstantData.waveFreq = 0.4f;     // Lower frequency for gentler waves
-        computePushConstantData.temp4 = 0.0f;        // Not used
+        computePushConstantData.delayFactor = 1000.0f;        // Range 1 - 400 fps,  1000.0f - 4 fps
 
         // Set crash type from the class variable
         computePushConstantData.crashType = computeCrashType;

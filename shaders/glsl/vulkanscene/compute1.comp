@@ -12,7 +12,7 @@ layout(push_constant) uniform PushConstants {
     float time;       // Animation time parameter
     float waveHeight; // Controls the amplitude of the wave
     float waveFreq;   // Controls the frequency of oscillation
-    float temp4;      // Unused
+    float delayFactor; // Controls shader execution time (1.0 = normal speed)
     uint crashType;   // Type of crash to simulate (0 = none)
     uint crashValue1; // Additional crash parameter 1
     uint crashValue2; // Additional crash parameter 2
@@ -136,6 +136,20 @@ void main()
         
         // Apply the wave to the y position 
         vertex.position_y += waveFactor;
+        
+        // Artificial delay loop controlled by delayFactor
+        float dummy = 0.0;
+        uint delayIters = uint(max(1.0, pushConstants.delayFactor * 1000.0));
+        for (uint i = 0; i < delayIters; ++i) {
+            // Accumulate a small value that will be used to modify the vertex
+            dummy += sin(float(i)) * 0.00001;
+        }
+        
+        // Use the dummy value to slightly modify the vertex position
+        // This ensures the loop can't be optimized out
+        vertex.position_x += dummy;
+        vertex.position_y += dummy;
+        vertex.position_z += dummy;
         
         // Output the modified vertex
         outData[pushConstants.dstOffset + idx] = vertex;
