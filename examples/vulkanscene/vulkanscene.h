@@ -1,4 +1,4 @@
-#define ENABLE_VALIDATION true
+#define ENABLE_VALIDATION false
 
 #define MAX_DRAW_FRAMES 0 // 0 = INF
 
