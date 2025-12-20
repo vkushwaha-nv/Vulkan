@@ -52,6 +52,12 @@ def checkRenameFiles(samplename):
                 "raytracingreflections.rmiss.spv": "miss.rmiss.spv",
                 "raytracingreflections.rgen.spv": "raygen.rgen.spv",
             }
+        case "raytracingVK":
+            mappings = {
+                "raytracingVK.rchit.spv": "closesthit.rchit.spv",
+                "raytracingVK.rmiss.spv": "miss.rmiss.spv",
+                "raytracingVK.rgen.spv": "raygen.rgen.spv",
+            }
         case "raytracingsbtdata":
             mappings = {
                 "raytracingsbtdata.rchit.spv": "closesthit.rchit.spv",

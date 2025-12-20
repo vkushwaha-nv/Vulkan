@@ -150,6 +150,7 @@ set(EXAMPLES
 	raytracinggltf
 	raytracingintersection
 	raytracingreflections
+	raytracingVK
 	raytracingpositionfetch
 	raytracingsbtdata
 	raytracingshadows
