@@ -33,7 +33,7 @@ void main()
     vec4 target = cam.projInverse * vec4(d.x, d.y, 1, 1) ;
     vec4 direction = cam.viewInverse*vec4(normalize(target.xyz / target.w), 0);
 
-    uint rayFlags = gl_RayFlagsOpaqueEXT;
+    uint rayFlags = gl_RayFlagsNoneEXT; // Allow any-hit shader to run
     uint cullMask = 0xff;
     float tmin = 0.001;
     float tmax = 10000.0;

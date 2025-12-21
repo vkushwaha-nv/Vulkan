@@ -1,0 +1,22 @@
+#version 460
+#extension GL_EXT_ray_tracing : require
+
+// Barycentric coordinates of hit point
+hitAttributeEXT vec2 attribs;
+
+struct RayPayload {
+    vec3 color;
+    float distance;
+    vec3 normal;
+};
+
+layout(location = 0) rayPayloadInEXT RayPayload rayPayload;
+
+void main()
+{
+    // Wireframe: only show edges, discard interior
+    vec3 bary = vec3(1.0 - attribs.x - attribs.y, attribs.x, attribs.y);
+    if (min(min(bary.x, bary.y), bary.z) > 0.15)
+        ignoreIntersectionEXT;
+}
+

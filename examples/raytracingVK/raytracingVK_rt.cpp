@@ -42,8 +42,8 @@ void VulkanExample::createBottomLevelAccelerationStructure()
 
 	// Build
 	VkAccelerationStructureGeometryKHR accelerationStructureGeometry = vks::initializers::accelerationStructureGeometryKHR();
-	accelerationStructureGeometry.flags = VK_GEOMETRY_OPAQUE_BIT_KHR;
-	accelerationStructureGeometry.geometryType = VK_GEOMETRY_TYPE_TRIANGLES_KHR;
+	accelerationStructureGeometry.flags = 0; // Non-opaque: any-hit shader will be called 
+	accelerationStructureGeometry.geometryType = VK_GEOMETRY_TYPE_TRIANGLES_KHR; //vktodo try aabb
 	accelerationStructureGeometry.geometry.triangles.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_TRIANGLES_DATA_KHR;
 	accelerationStructureGeometry.geometry.triangles.vertexFormat = VK_FORMAT_R32G32B32_SFLOAT;
 	accelerationStructureGeometry.geometry.triangles.vertexData = vertexBufferDeviceAddress;
@@ -286,15 +286,20 @@ void VulkanExample::createRayTracingPipeline()
 		shaderGroups.push_back(shaderGroup);
 	}
 
-	// Closest hit group
+	// Closest hit group (with any-hit shader for transparency)
 	{
 		shaderStages.push_back(loadShader(getShadersPath() + "raytracingVK/closesthit.rchit.spv", VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR));
+		uint32_t closestHitIndex = static_cast<uint32_t>(shaderStages.size()) - 1;
+		
+		shaderStages.push_back(loadShader(getShadersPath() + "raytracingVK/anyhit.rahit.spv", VK_SHADER_STAGE_ANY_HIT_BIT_KHR));
+		uint32_t anyHitIndex = static_cast<uint32_t>(shaderStages.size()) - 1;
+		
 		VkRayTracingShaderGroupCreateInfoKHR shaderGroup{};
 		shaderGroup.sType = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_KHR;
 		shaderGroup.type = VK_RAY_TRACING_SHADER_GROUP_TYPE_TRIANGLES_HIT_GROUP_KHR;
 		shaderGroup.generalShader = VK_SHADER_UNUSED_KHR;
-		shaderGroup.closestHitShader = static_cast<uint32_t>(shaderStages.size()) - 1;
-		shaderGroup.anyHitShader = VK_SHADER_UNUSED_KHR;
+		shaderGroup.closestHitShader = closestHitIndex;
+		shaderGroup.anyHitShader = anyHitIndex;
 		shaderGroup.intersectionShader = VK_SHADER_UNUSED_KHR;
 		shaderGroups.push_back(shaderGroup);
 	}
