@@ -35,7 +35,15 @@ public:
 	VkDescriptorSetLayout descriptorSetLayout{ VK_NULL_HANDLE };
 	std::array<VkDescriptorSet, maxConcurrentFrames> descriptorSets{};
 
-	vkglTF::Model scene;
+	vkglTF::Model* scene = nullptr;
+
+	// Test geometry flag - set to true to use procedural star instead of loading model
+	bool useTestGeometry = false;
+	vks::Buffer testVertexBuffer;
+	vks::Buffer testIndexBuffer;
+	uint32_t testVertexCount = 0;
+	uint32_t testIndexCount = 0;
+	VkDeviceSize testVertexStride = 0;
 
 	VulkanExample();
 	~VulkanExample();
@@ -57,5 +65,6 @@ public:
 	void createUniformBuffer();
 	void handleResize();
 	void updateUniformBuffers();
+	void createTestGeometry();
 };
 

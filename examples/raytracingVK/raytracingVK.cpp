@@ -13,12 +13,13 @@ VulkanExample::VulkanExample() : VulkanRaytracingSample()
 	title = "Ray tracing VK app";
 	width = 2560;
 	height = 1440;
+	useTestGeometry = false;
 	timerSpeed *= 0.5f;
 	camera.rotationSpeed *= 0.25f;
-	camera.type = Camera::CameraType::firstperson;
+	camera.type = Camera::CameraType::lookat;
 	camera.setPerspective(60.0f, (float)width / (float)height, 0.1f, 512.0f);
 	camera.setRotation(glm::vec3(0.0f, 0.0f, 0.0f));
-	camera.setTranslation(glm::vec3(0.0f, 0.5f, -10.0f));
+	camera.setTranslation(glm::vec3(0.0f, 0.0f, -8.0f));
 	enableExtensions();
 }
 
@@ -35,6 +36,12 @@ VulkanExample::~VulkanExample()
 	shaderBindingTables.hit.destroy();
 	for (auto& buffer : uniformBuffers) {
 		buffer.destroy();
+	}
+	if (useTestGeometry) {
+		testVertexBuffer.destroy();
+		testIndexBuffer.destroy();
+	} else {
+		delete scene;
 	}
 }
 
@@ -75,8 +82,8 @@ void VulkanExample::createDescriptorSets()
 		accelerationStructureWrite.descriptorType = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR;
 
 		VkDescriptorImageInfo storageImageDescriptor{ VK_NULL_HANDLE, storageImage.view, VK_IMAGE_LAYOUT_GENERAL };
-		VkDescriptorBufferInfo vertexBufferDescriptor{ scene.vertices.buffer, 0, VK_WHOLE_SIZE };
-		VkDescriptorBufferInfo indexBufferDescriptor{ scene.indices.buffer, 0, VK_WHOLE_SIZE };
+		VkDescriptorBufferInfo vertexBufferDescriptor{ useTestGeometry ? testVertexBuffer.buffer : scene->vertices.buffer, 0, VK_WHOLE_SIZE };
+		VkDescriptorBufferInfo indexBufferDescriptor{ useTestGeometry ? testIndexBuffer.buffer : scene->indices.buffer, 0, VK_WHOLE_SIZE };
 
 		std::vector<VkWriteDescriptorSet> writeDescriptorSets = {
 			// Binding 0: Top level acceleration structure

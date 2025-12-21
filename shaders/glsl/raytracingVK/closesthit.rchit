@@ -66,7 +66,17 @@ void main()
     // Basic lighting
     vec3 lightVector = normalize(ubo.lightPos.xyz);
     float dot_product = max(dot(lightVector, normal), 0.6);
-    rayPayload.color = v0.color.rgb * vec3(dot_product);
+
+    // Generate color from primitiveID
+    vec3 primColor = vec3(
+        fract(sin(float(gl_PrimitiveID) * 12.9898) * 43758.5453),
+        fract(sin(float(gl_PrimitiveID) * 78.233) * 43758.5453),
+        fract(sin(float(gl_PrimitiveID) * 45.164) * 43758.5453)
+    );
+
+    // Mix vertex color with primitive color (adjust blend factor as needed)
+    vec3 finalColor = mix(v0.color.rgb, primColor, 0.5);
+    rayPayload.color = finalColor * vec3(dot_product);
     rayPayload.distance = gl_RayTmaxEXT;
     rayPayload.normal = normal;
 

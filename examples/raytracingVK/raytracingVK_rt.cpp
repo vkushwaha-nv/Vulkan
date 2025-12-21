@@ -13,19 +13,32 @@
 */
 void VulkanExample::createBottomLevelAccelerationStructure()
 {
-	// Instead of a simple triangle, we'll be loading a more complex scene for this example
-	// The shaders are accessing the vertex and index buffers of the scene, so the proper usage flag has to be set on the vertex and index buffers for the scene
-	vkglTF::memoryPropertyFlags = VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
-	const uint32_t glTFLoadingFlags = vkglTF::FileLoadingFlags::PreTransformVertices | vkglTF::FileLoadingFlags::PreMultiplyVertexColors | vkglTF::FileLoadingFlags::FlipY;
-	scene.loadFromFile(getAssetPath() + "models/teapot.gltf", vulkanDevice, queue, glTFLoadingFlags);
-
 	VkDeviceOrHostAddressConstKHR vertexBufferDeviceAddress{};
 	VkDeviceOrHostAddressConstKHR indexBufferDeviceAddress{};
+	uint32_t numTriangles = 0;
+	uint32_t maxVertex = 0;
+	VkDeviceSize vertexStride = 0;
 
-	vertexBufferDeviceAddress.deviceAddress = getBufferDeviceAddress(scene.vertices.buffer);
-	indexBufferDeviceAddress.deviceAddress = getBufferDeviceAddress(scene.indices.buffer);
+	if (useTestGeometry) {
+		createTestGeometry();
+		vertexBufferDeviceAddress.deviceAddress = getBufferDeviceAddress(testVertexBuffer.buffer);
+		indexBufferDeviceAddress.deviceAddress = getBufferDeviceAddress(testIndexBuffer.buffer);
+		numTriangles = testIndexCount / 3;
+		maxVertex = testVertexCount - 1;
+		vertexStride = testVertexStride;
+	} else {
+		// Load model from file
+		vkglTF::memoryPropertyFlags = VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+		const uint32_t glTFLoadingFlags = vkglTF::FileLoadingFlags::PreTransformVertices | vkglTF::FileLoadingFlags::PreMultiplyVertexColors | vkglTF::FileLoadingFlags::FlipY;
+		scene = new vkglTF::Model();
+		scene->loadFromFile(getAssetPath() + "models/teapot.gltf", vulkanDevice, queue, glTFLoadingFlags);
 
-	uint32_t numTriangles = static_cast<uint32_t>(scene.indices.count) / 3;
+		vertexBufferDeviceAddress.deviceAddress = getBufferDeviceAddress(scene->vertices.buffer);
+		indexBufferDeviceAddress.deviceAddress = getBufferDeviceAddress(scene->indices.buffer);
+		numTriangles = static_cast<uint32_t>(scene->indices.count) / 3;
+		maxVertex = scene->vertices.count - 1;
+		vertexStride = sizeof(vkglTF::Vertex);
+	}
 
 	// Build
 	VkAccelerationStructureGeometryKHR accelerationStructureGeometry = vks::initializers::accelerationStructureGeometryKHR();
@@ -34,8 +47,8 @@ void VulkanExample::createBottomLevelAccelerationStructure()
 	accelerationStructureGeometry.geometry.triangles.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_TRIANGLES_DATA_KHR;
 	accelerationStructureGeometry.geometry.triangles.vertexFormat = VK_FORMAT_R32G32B32_SFLOAT;
 	accelerationStructureGeometry.geometry.triangles.vertexData = vertexBufferDeviceAddress;
-	accelerationStructureGeometry.geometry.triangles.maxVertex = scene.vertices.count - 1;
-	accelerationStructureGeometry.geometry.triangles.vertexStride = sizeof(vkglTF::Vertex);
+	accelerationStructureGeometry.geometry.triangles.maxVertex = maxVertex;
+	accelerationStructureGeometry.geometry.triangles.vertexStride = vertexStride;
 	accelerationStructureGeometry.geometry.triangles.indexType = VK_INDEX_TYPE_UINT32;
 	accelerationStructureGeometry.geometry.triangles.indexData = indexBufferDeviceAddress;
 	accelerationStructureGeometry.geometry.triangles.transformData.deviceAddress = 0;
