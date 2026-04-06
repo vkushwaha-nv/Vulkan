@@ -10,6 +10,12 @@
 #include "VulkanglTFModel.h"
 #include <thread>
 #include <mutex>
+#include <chrono>
+#include <fstream>
+#include <limits>
+
+#define PIPELINE_COUNT 3000
+#define DESTROY_THREAD_COUNT 16
 
 class VulkanExample: public VulkanExampleBase
 {
@@ -32,9 +38,9 @@ public:
 	VkPhysicalDeviceGraphicsPipelineLibraryFeaturesEXT graphicsPipelineLibraryFeatures{};
 
 	struct PipelineLibrary {
-		VkPipeline vertexInputInterface;
-		VkPipeline preRasterizationShaders;
-		VkPipeline fragmentOutputInterface;
+		std::vector<VkPipeline> vertexInputInterface;
+		std::vector<VkPipeline> preRasterizationShaders;
+		std::vector<VkPipeline> fragmentOutputInterface;
 		std::vector<VkPipeline> fragmentShaders;
 	} pipelineLibrary;
 
@@ -46,12 +52,28 @@ public:
 	};
 
 	std::mutex mutex;
-	VkPipelineCache threadPipelineCache{ VK_NULL_HANDLE };
+	std::vector<VkPipelineCache> allPipelineCaches;
+	std::vector<VkShaderModule> allShaderModules;
+
+	// Create a new pipeline cache for each pipeline, to isolate them during free
+	VkPipelineCache newPipelineCache()
+	{
+		VkPipelineCacheCreateInfo ci{};
+		ci.sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO;
+		VkPipelineCache cache = VK_NULL_HANDLE;
+		VK_CHECK_RESULT(vkCreatePipelineCache(device, &ci, nullptr, &cache));
+		allPipelineCaches.push_back(cache);
+		return cache;
+	}
 
 	bool  newPipelineCreated = false;
+	int   vertexInputPipelineIndex = 0;
 
 	uint32_t splitX{ 2 };
 	uint32_t splitY{ 2 };
+
+	// Wall time for preparePipelineLibrary() + executable pipeline creation (ms); used for teardown summary on stdout
+	int64_t pipelineCreateWallTimeMs{ 0 };
 
 	std::vector<glm::vec3> colors{};
 	float rotation{ 0.0f };
@@ -59,6 +81,22 @@ public:
 	VulkanExample() : VulkanExampleBase()
 	{
 		title = "Graphics pipeline library";
+#if defined(_WIN32)
+		// Without this, a WIN32-subsystem build has no console, so std::cout is invisible unless
+		// you redirect (e.g. > out.txt). Skip setupConsole when stdout is already a file or pipe so
+		// redirection keeps working; validation mode already called setupConsole from the base ctor.
+		{
+			HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
+			DWORD fileType = FILE_TYPE_UNKNOWN;
+			if (hOut != nullptr && hOut != INVALID_HANDLE_VALUE) {
+				fileType = GetFileType(hOut);
+			}
+			const bool stdoutRedirected = (fileType == FILE_TYPE_DISK || fileType == FILE_TYPE_PIPE);
+			if (!stdoutRedirected && GetConsoleWindow() == nullptr) {
+				setupConsole(title);
+			}
+		}
+#endif
 		camera.type = Camera::CameraType::lookat;
 		camera.setPosition(glm::vec3(0.0f, 0.0f, -2.0f));
 		camera.setRotation(glm::vec3(-25.0f, 15.0f, 0.0f));
@@ -78,16 +116,74 @@ public:
 	~VulkanExample()
 	{
 		if (device) {
-			for (auto pipeline : pipelines) {
-				vkDestroyPipeline(device, pipeline, nullptr);
+			// Flatten all pipelines into a single list matching the order of allPipelineCaches
+			// Cache order: vertexInput[0..N], preRasterization[0..N], fragmentOutput[0..N], fragmentShaders[0..N], executables[0..N]
+			std::vector<VkPipeline> allPipelines;
+			allPipelines.reserve(allPipelineCaches.size());
+			for (auto& p : pipelineLibrary.vertexInputInterface) allPipelines.push_back(p);
+			for (auto& p : pipelineLibrary.preRasterizationShaders) allPipelines.push_back(p);
+			for (auto& p : pipelineLibrary.fragmentOutputInterface) allPipelines.push_back(p);
+			for (auto& p : pipelineLibrary.fragmentShaders) allPipelines.push_back(p);
+			for (auto& p : pipelines) allPipelines.push_back(p);
+
+			// Each thread alternates: vkDestroyPipeline, vkDestroyPipelineCache, vkDestroyShaderModule, ...
+			int total = (int)allPipelines.size();
+			int totalModules = (int)allShaderModules.size();
+			int perThread = (total + DESTROY_THREAD_COUNT - 1) / DESTROY_THREAD_COUNT;
+			std::vector<std::thread> threads;
+
+			auto destroyStart = std::chrono::steady_clock::now();
+
+			for (int t = 0; t < DESTROY_THREAD_COUNT; t++) {
+				int start = t * perThread;
+				int end = std::min(start + perThread, total);
+				if (start >= total) break;
+				threads.emplace_back([this, &allPipelines, start, end, totalModules]() {
+					for (int i = start; i < end; i++) {
+						vkDestroyPipeline(device, allPipelines[i], nullptr);
+						vkDestroyPipelineCache(device, allPipelineCaches[i], nullptr);
+						if (i < totalModules) {
+							//vktodo vkDestroyShaderModule(device, allShaderModules[i], nullptr);
+						}
+					}
+				});
 			}
-			for (auto pipeline : pipelineLibrary.fragmentShaders) {
-				vkDestroyPipeline(device, pipeline, nullptr);
+
+			for (auto& t : threads) {
+				t.join();
 			}
-			vkDestroyPipeline(device, pipelineLibrary.fragmentOutputInterface, nullptr);
-			vkDestroyPipeline(device, pipelineLibrary.preRasterizationShaders, nullptr);
-			vkDestroyPipeline(device, pipelineLibrary.vertexInputInterface, nullptr);
-			vkDestroyPipelineCache(device, threadPipelineCache, nullptr);
+
+			auto destroyEnd = std::chrono::steady_clock::now();
+			auto destroyMs = std::chrono::duration_cast<std::chrono::milliseconds>(destroyEnd - destroyStart).count();
+			std::cout << "=== Total destroy time: " << destroyMs << " ms (" << total << " pipelines, " << (int)allPipelineCaches.size() << " caches, " << totalModules << " shader modules, " << DESTROY_THREAD_COUNT << " threads) ===" << std::endl;
+			std::cout << "=== Pipeline wall time: create " << pipelineCreateWallTimeMs << " ms, destroy " << destroyMs << " ms";
+			if (pipelineCreateWallTimeMs > 0) {
+				std::cout << ", total " << (pipelineCreateWallTimeMs + destroyMs) << " ms";
+			}
+			std::cout << " ===" << std::endl;
+
+			{
+				std::ofstream logFile("C:\\cs1\\pipelineTime.txt", std::ios::app);
+				if (logFile.is_open()) {
+					logFile << "Destroy time: " << destroyMs << " ms | "
+						<< total << " pipelines, "
+						<< (int)allPipelineCaches.size() << " caches, "
+						<< totalModules << " shader modules, "
+						<< DESTROY_THREAD_COUNT << " threads" << std::endl;
+					logFile.flush();
+				}
+			}
+
+#if defined(_WIN32)
+			// Keep the auxiliary console open so destroy timings stay visible (skip if no console or stdout redirected).
+			if (GetConsoleWindow() != nullptr) {
+				std::cout << std::endl << "Press Enter to close the console..." << std::flush;
+				std::cin.clear();
+				std::cin.ignore((std::numeric_limits<std::streamsize>::max)(), '\n');
+				std::cin.get();
+			}
+#endif
+
 			vkDestroyPipelineLayout(device, pipelineLayout, nullptr);
 			vkDestroyDescriptorSetLayout(device, descriptorSetLayout, nullptr);
 			for (auto& buffer : uniformBuffers) {
@@ -172,25 +268,109 @@ public:
 		VK_CHECK_RESULT(vkCreatePipelineLayout(device, &pipelineLayoutCreateInfo, nullptr, &pipelineLayout));
 
 		// Create a pipeline library for the vertex input interface
+		// Each pipeline gets a unique combination of topology, primitive restart, stride, input rate, and attribute formats
 		{
 			VkGraphicsPipelineLibraryCreateInfoEXT libraryInfo{};
 			libraryInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_LIBRARY_CREATE_INFO_EXT;
 			libraryInfo.flags = VK_GRAPHICS_PIPELINE_LIBRARY_VERTEX_INPUT_INTERFACE_BIT_EXT;
 
-			VkPipelineVertexInputStateCreateInfo vertexInputState = *vkglTF::Vertex::getPipelineVertexInputState({ vkglTF::VertexComponent::Position, vkglTF::VertexComponent::Normal, vkglTF::VertexComponent::Color });
-			VkPipelineInputAssemblyStateCreateInfo inputAssemblyState = vks::initializers::pipelineInputAssemblyStateCreateInfo(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST, 0, VK_FALSE);
+			// Available topologies to cycle through
+			const VkPrimitiveTopology topologies[] = {
+				VK_PRIMITIVE_TOPOLOGY_POINT_LIST,
+				VK_PRIMITIVE_TOPOLOGY_LINE_LIST,
+				VK_PRIMITIVE_TOPOLOGY_LINE_STRIP,
+				VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
+				VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP,
+				VK_PRIMITIVE_TOPOLOGY_TRIANGLE_FAN,
+			};
+			constexpr uint32_t topologyCount = 6;
 
-			VkGraphicsPipelineCreateInfo pipelineLibraryCI{};
-			pipelineLibraryCI.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-			pipelineLibraryCI.flags = VK_PIPELINE_CREATE_LIBRARY_BIT_KHR | VK_PIPELINE_CREATE_RETAIN_LINK_TIME_OPTIMIZATION_INFO_BIT_EXT;
-			pipelineLibraryCI.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-			pipelineLibraryCI.pNext = &libraryInfo;
-			pipelineLibraryCI.pInputAssemblyState = &inputAssemblyState;
-			pipelineLibraryCI.pVertexInputState = &vertexInputState;
-			VK_CHECK_RESULT(vkCreateGraphicsPipelines(device, pipelineCache, 1, &pipelineLibraryCI, nullptr, &pipelineLibrary.vertexInputInterface));
+			// Available vec3-compatible formats to cycle through for attributes
+			const VkFormat vec3Formats[] = {
+				VK_FORMAT_R32G32B32_SFLOAT,
+				VK_FORMAT_R32G32B32_SINT,
+				VK_FORMAT_R32G32B32_UINT,
+			};
+			constexpr uint32_t formatCount = 3;
+
+			// Input rates to cycle through
+			const VkVertexInputRate inputRates[] = {
+				VK_VERTEX_INPUT_RATE_VERTEX,
+				VK_VERTEX_INPUT_RATE_INSTANCE,
+			};
+
+			pipelineLibrary.vertexInputInterface.resize(PIPELINE_COUNT);
+			for (int i = 0; i < PIPELINE_COUNT; i++) {
+				// Vary primitive topology
+				VkPrimitiveTopology topology = topologies[i % topologyCount];
+
+				// Vary primitive restart enable (only meaningful for strip/fan topologies, but valid to set)
+				VkBool32 primitiveRestart = ((i / topologyCount) % 2) ? VK_TRUE : VK_FALSE;
+
+				VkPipelineInputAssemblyStateCreateInfo inputAssemblyState{};
+				inputAssemblyState.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+				inputAssemblyState.topology = topology;
+				inputAssemblyState.primitiveRestartEnable = primitiveRestart;
+
+				// Vary input rate between vertex and instance
+				VkVertexInputRate inputRate = inputRates[i % 2];
+
+				// Vary stride by adding different padding amounts (base stride = 36 bytes for 3x vec3)
+				uint32_t extraPadding = (i % 16) * 4;  // 0 to 60 bytes of extra padding
+				uint32_t stride = sizeof(float) * 9 + extraPadding;
+
+				VkVertexInputBindingDescription bindingDesc{};
+				bindingDesc.binding = 0;
+				bindingDesc.stride = stride;
+				bindingDesc.inputRate = inputRate;
+
+				// Vary attribute formats and offsets per pipeline
+				// Rotate formats independently for each attribute to maximize combinations
+				VkFormat posFormat   = vec3Formats[(i) % formatCount];
+				VkFormat normFormat  = vec3Formats[(i / formatCount) % formatCount];
+				VkFormat colorFormat = vec3Formats[(i / (formatCount * formatCount)) % formatCount];
+
+				// Vary attribute offsets with small perturbations (multiples of 4 for alignment)
+				uint32_t posOffset   = 0;
+				uint32_t normOffset  = sizeof(float) * 3 + ((i % 4) * 4);
+				uint32_t colorOffset = sizeof(float) * 6 + ((i % 8) * 4);
+
+				VkVertexInputAttributeDescription attributes[3] = {};
+				// Position
+				attributes[0].location = 0;
+				attributes[0].binding = 0;
+				attributes[0].format = posFormat;
+				attributes[0].offset = posOffset;
+				// Normal
+				attributes[1].location = 1;
+				attributes[1].binding = 0;
+				attributes[1].format = normFormat;
+				attributes[1].offset = normOffset;
+				// Color
+				attributes[2].location = 2;
+				attributes[2].binding = 0;
+				attributes[2].format = colorFormat;
+				attributes[2].offset = colorOffset;
+
+				VkPipelineVertexInputStateCreateInfo vertexInputState{};
+				vertexInputState.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+				vertexInputState.vertexBindingDescriptionCount = 1;
+				vertexInputState.pVertexBindingDescriptions = &bindingDesc;
+				vertexInputState.vertexAttributeDescriptionCount = 3;
+				vertexInputState.pVertexAttributeDescriptions = attributes;
+
+				VkGraphicsPipelineCreateInfo pipelineLibraryCI{};
+				pipelineLibraryCI.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+				pipelineLibraryCI.flags = VK_PIPELINE_CREATE_LIBRARY_BIT_KHR | VK_PIPELINE_CREATE_RETAIN_LINK_TIME_OPTIMIZATION_INFO_BIT_EXT;
+				pipelineLibraryCI.pNext = &libraryInfo;
+				pipelineLibraryCI.pInputAssemblyState = &inputAssemblyState;
+				pipelineLibraryCI.pVertexInputState = &vertexInputState;
+
+				VK_CHECK_RESULT(vkCreateGraphicsPipelines(device, newPipelineCache(), 1, &pipelineLibraryCI, nullptr, &pipelineLibrary.vertexInputInterface[i]));
+			}
 		}
 
-		// Creata a pipeline library for the vertex shader stage
+		// Create pipeline libraries for the vertex shader stage — one per PIPELINE_COUNT with unique specialization constants
 		{
 			VkGraphicsPipelineLibraryCreateInfoEXT libraryInfo{};
 			libraryInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_LIBRARY_CREATE_INFO_EXT;
@@ -237,20 +417,54 @@ public:
 			pipelineLibraryCI.pDynamicState = &dynamicInfo;
 			pipelineLibraryCI.pViewportState = &viewportState;
 			pipelineLibraryCI.pRasterizationState = &rasterizationState;
-			VK_CHECK_RESULT(vkCreateGraphicsPipelines(device, pipelineCache, 1, &pipelineLibraryCI, nullptr, &pipelineLibrary.preRasterizationShaders));
+
+			pipelineLibrary.preRasterizationShaders.resize(PIPELINE_COUNT);
+			for (int i = 0; i < PIPELINE_COUNT; i++) {
+				// Each pipeline gets a unique VARIANT_ID specialization constant
+				int32_t variantId = i;
+
+				VkSpecializationMapEntry specMapEntry{};
+				specMapEntry.constantID = 0;
+				specMapEntry.offset = 0;
+				specMapEntry.size = sizeof(int32_t);
+
+				VkSpecializationInfo specInfo{};
+				specInfo.mapEntryCount = 1;
+				specInfo.pMapEntries = &specMapEntry;
+				specInfo.dataSize = sizeof(int32_t);
+				specInfo.pData = &variantId;
+
+				shaderStageCI.pSpecializationInfo = &specInfo;
+
+				// Also create a standalone shader module (unused, but allocated for testing free)
+				VkShaderModule vertShaderModule = VK_NULL_HANDLE;
+				VK_CHECK_RESULT(vkCreateShaderModule(device, &shaderModuleCI, nullptr, &vertShaderModule));
+				allShaderModules.push_back(vertShaderModule);
+
+				VK_CHECK_RESULT(vkCreateGraphicsPipelines(device, newPipelineCache(), 1, &pipelineLibraryCI, nullptr, &pipelineLibrary.preRasterizationShaders[i]));
+			}
 
 			delete[] shaderInfo.code;
 		}
 
-		// Create a pipeline library for the fragment output interface
+		// Create pipeline libraries for the fragment output interface — one per PIPELINE_COUNT with varied blend state
 		{
 			VkGraphicsPipelineLibraryCreateInfoEXT libraryInfo{};
 			libraryInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_LIBRARY_CREATE_INFO_EXT;
 			libraryInfo.flags = VK_GRAPHICS_PIPELINE_LIBRARY_FRAGMENT_OUTPUT_INTERFACE_BIT_EXT;
 
-			VkPipelineColorBlendAttachmentState  blendAttachmentSstate = vks::initializers::pipelineColorBlendAttachmentState(0xf, VK_FALSE);
-			VkPipelineColorBlendStateCreateInfo  colorBlendState = vks::initializers::pipelineColorBlendStateCreateInfo(1, &blendAttachmentSstate);
 			VkPipelineMultisampleStateCreateInfo multisampleState = vks::initializers::pipelineMultisampleStateCreateInfo(VK_SAMPLE_COUNT_1_BIT);
+
+			// Blend factors and ops to cycle through
+			const VkBlendFactor srcColorFactors[] = {
+				VK_BLEND_FACTOR_ONE, VK_BLEND_FACTOR_SRC_ALPHA, VK_BLEND_FACTOR_SRC_COLOR,
+				VK_BLEND_FACTOR_DST_COLOR, VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA };
+			const VkBlendFactor dstColorFactors[] = {
+				VK_BLEND_FACTOR_ZERO, VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA, VK_BLEND_FACTOR_ONE,
+				VK_BLEND_FACTOR_DST_ALPHA, VK_BLEND_FACTOR_ONE_MINUS_DST_COLOR };
+			const VkBlendOp blendOps[] = {
+				VK_BLEND_OP_ADD, VK_BLEND_OP_SUBTRACT, VK_BLEND_OP_REVERSE_SUBTRACT,
+				VK_BLEND_OP_MIN, VK_BLEND_OP_MAX };
 
 			VkGraphicsPipelineCreateInfo pipelineLibraryCI{};
 			pipelineLibraryCI.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
@@ -258,26 +472,50 @@ public:
 			pipelineLibraryCI.layout = pipelineLayout;
 			pipelineLibraryCI.renderPass = renderPass;
 			pipelineLibraryCI.flags = VK_PIPELINE_CREATE_LIBRARY_BIT_KHR | VK_PIPELINE_CREATE_RETAIN_LINK_TIME_OPTIMIZATION_INFO_BIT_EXT;
-			pipelineLibraryCI.pColorBlendState = &colorBlendState;
 			pipelineLibraryCI.pMultisampleState = &multisampleState;
-			VK_CHECK_RESULT(vkCreateGraphicsPipelines(device, pipelineCache, 1, &pipelineLibraryCI, nullptr, &pipelineLibrary.fragmentOutputInterface));
+
+			pipelineLibrary.fragmentOutputInterface.resize(PIPELINE_COUNT);
+			for (int i = 0; i < PIPELINE_COUNT; i++) {
+				// Vary blend enable, blend factors, blend ops, and color write mask per pipeline
+				VkPipelineColorBlendAttachmentState blendAttachment{};
+				blendAttachment.blendEnable = (i % 2) ? VK_TRUE : VK_FALSE;
+				blendAttachment.srcColorBlendFactor = srcColorFactors[i % 5];
+				blendAttachment.dstColorBlendFactor = dstColorFactors[i % 5];
+				blendAttachment.colorBlendOp = blendOps[i % 5];
+				blendAttachment.srcAlphaBlendFactor = srcColorFactors[(i + 1) % 5];
+				blendAttachment.dstAlphaBlendFactor = dstColorFactors[(i + 2) % 5];
+				blendAttachment.alphaBlendOp = blendOps[(i + 1) % 5];
+				// Vary color write mask — cycle through different channel combinations
+				const VkColorComponentFlags writeMasks[] = {
+					0xf,  // RGBA
+					VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT,  // RGB
+					VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_A_BIT,  // RA
+					VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT,  // GB
+					VK_COLOR_COMPONENT_R_BIT,  // R only
+					VK_COLOR_COMPONENT_G_BIT,  // G only
+					VK_COLOR_COMPONENT_B_BIT,  // B only
+				};
+				blendAttachment.colorWriteMask = writeMasks[i % 7];
+
+				VkPipelineColorBlendStateCreateInfo colorBlendState = vks::initializers::pipelineColorBlendStateCreateInfo(1, &blendAttachment);
+				// Vary blend constants
+				colorBlendState.blendConstants[0] = (float)(i % 10) / 10.0f;
+				colorBlendState.blendConstants[1] = (float)((i + 3) % 10) / 10.0f;
+				colorBlendState.blendConstants[2] = (float)((i + 6) % 10) / 10.0f;
+				colorBlendState.blendConstants[3] = (float)((i + 9) % 10) / 10.0f;
+
+				pipelineLibraryCI.pColorBlendState = &colorBlendState;
+				VK_CHECK_RESULT(vkCreateGraphicsPipelines(device, newPipelineCache(), 1, &pipelineLibraryCI, nullptr, &pipelineLibrary.fragmentOutputInterface[i]));
+			}
 		}
 	}
 
+	// Thread function kept for future use (e.g. deleting pipelines)
 	void threadFn()
 	{
-		const std::lock_guard<std::mutex> lock(mutex);
-
 		auto start = std::chrono::steady_clock::now();
 
 		prepareNewPipeline();
-		newPipelineCreated = true;
-
-		// Change viewport/draw count
-		if (pipelines.size() > splitX * splitY) {
-			splitX++;
-			splitY++;
-		}
 
 		auto delta = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - start);
 		std::cout << "Pipeline created in " << delta.count() << " microseconds\n";
@@ -310,22 +548,36 @@ public:
 		shaderStageCI.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
 		shaderStageCI.pName = "main";
 
-		// Select lighting model using a specialization constant
+		// Select lighting model and variant ID using specialization constants
 		srand(benchmark.active ? 0 : ((unsigned int)time(NULL)));
-		uint32_t lighting_model = (int)(rand() % 4);
+		struct FragSpecData {
+			int32_t lightingModel;
+			int32_t variantId;
+		} fragSpecData;
+		fragSpecData.lightingModel = (int)(rand() % 4);
+		fragSpecData.variantId = vertexInputPipelineIndex;  // sequential ID per pipeline
 
-		// Each shader constant of a shader stage corresponds to one map entry
-		VkSpecializationMapEntry specializationMapEntry{};
-		specializationMapEntry.constantID = 0;
-		specializationMapEntry.size = sizeof(uint32_t);
+		// Two specialization map entries: constant_id=0 (LIGHTING_MODEL), constant_id=1 (VARIANT_ID)
+		VkSpecializationMapEntry specializationMapEntries[2] = {};
+		specializationMapEntries[0].constantID = 0;
+		specializationMapEntries[0].offset = offsetof(FragSpecData, lightingModel);
+		specializationMapEntries[0].size = sizeof(int32_t);
+		specializationMapEntries[1].constantID = 1;
+		specializationMapEntries[1].offset = offsetof(FragSpecData, variantId);
+		specializationMapEntries[1].size = sizeof(int32_t);
 
 		VkSpecializationInfo specializationInfo{};
-		specializationInfo.mapEntryCount = 1;
-		specializationInfo.pMapEntries = &specializationMapEntry;
-		specializationInfo.dataSize = sizeof(uint32_t);
-		specializationInfo.pData = &lighting_model;
+		specializationInfo.mapEntryCount = 2;
+		specializationInfo.pMapEntries = specializationMapEntries;
+		specializationInfo.dataSize = sizeof(FragSpecData);
+		specializationInfo.pData = &fragSpecData;
 
 		shaderStageCI.pSpecializationInfo = &specializationInfo;
+
+		// Also create a standalone shader module (unused, but allocated for testing free)
+		VkShaderModule fragShaderModule = VK_NULL_HANDLE;
+		VK_CHECK_RESULT(vkCreateShaderModule(device, &shaderModuleCI, nullptr, &fragShaderModule));
+		allShaderModules.push_back(fragShaderModule);
 
 		VkGraphicsPipelineCreateInfo pipelineCI{};
 		pipelineCI.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
@@ -338,15 +590,18 @@ public:
 		pipelineCI.pDepthStencilState = &depthStencilState;
 		pipelineCI.pMultisampleState = &multisampleState;
 		VkPipeline fragmentShader = VK_NULL_HANDLE;
-		VK_CHECK_RESULT(vkCreateGraphicsPipelines(device, threadPipelineCache, 1, &pipelineCI, nullptr, &fragmentShader));
+		VK_CHECK_RESULT(vkCreateGraphicsPipelines(device, newPipelineCache(), 1, &pipelineCI, nullptr, &fragmentShader));
 
 		// Create the pipeline using the pre-built pipeline library parts
 		// Except for above fragment shader part all parts have been pre-built and will be re-used
+		// Use the nth vertex input pipeline, cycling through the array
+		int idx = vertexInputPipelineIndex % PIPELINE_COUNT;
+		vertexInputPipelineIndex++;
 		std::vector<VkPipeline> libraries = {
-			pipelineLibrary.vertexInputInterface,
-			pipelineLibrary.preRasterizationShaders,
+			pipelineLibrary.vertexInputInterface[idx],
+			pipelineLibrary.preRasterizationShaders[idx],
 			fragmentShader,
-			pipelineLibrary.fragmentOutputInterface };
+			pipelineLibrary.fragmentOutputInterface[idx] };
 
 		// Link the library parts into a graphics pipeline
 		VkPipelineLibraryCreateInfoKHR pipelineLibraryCI{};
@@ -370,7 +625,7 @@ public:
 		}
 
 		VkPipeline executable = VK_NULL_HANDLE;
-		VK_CHECK_RESULT(vkCreateGraphicsPipelines(device, threadPipelineCache, 1, &executablePipelineCI, nullptr, &executable));
+		VK_CHECK_RESULT(vkCreateGraphicsPipelines(device, newPipelineCache(), 1, &executablePipelineCI, nullptr, &executable));
 
 		pipelines.push_back(executable);
 		// Push fragment shader to list for deletion in the sample's destructor
@@ -405,16 +660,32 @@ public:
 		loadAssets();
 		prepareUniformBuffers();
 		setupDescriptors();
+		auto createStart = std::chrono::steady_clock::now();
+
 		preparePipelineLibrary();
 
-		// Create a separate pipeline cache for the pipeline creation thread
-		VkPipelineCacheCreateInfo pipelineCachCI = {};
-		pipelineCachCI.sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO;
-		vkCreatePipelineCache(device, &pipelineCachCI, nullptr, &threadPipelineCache);
+		// Pre-create all PIPELINE_COUNT executable pipelines up front
+		for (int i = 0; i < PIPELINE_COUNT; i++) {
+			prepareNewPipeline();
+		}
 
-		// Create first pipeline using a background thread
-		std::thread pipelineGenerationThread(&VulkanExample::threadFn, this);
-		pipelineGenerationThread.detach();
+		auto createEnd = std::chrono::steady_clock::now();
+		auto createMs = std::chrono::duration_cast<std::chrono::milliseconds>(createEnd - createStart).count();
+		pipelineCreateWallTimeMs = createMs;
+		std::cout << "=== Total pipeline creation time: " << createMs << " ms (GPL libraries + " << PIPELINE_COUNT << " executable pipelines) ===" << std::endl;
+
+		{
+			std::ofstream logFile("C:\\cs1\\pipelineTime.txt", std::ios::app);
+			if (logFile.is_open()) {
+				logFile << "Create time: " << createMs << " ms | "
+					<< PIPELINE_COUNT << " pipelines" << std::endl;
+				logFile.flush();
+			}
+		}
+
+		// Set up the viewport grid to show all pipelines at once
+		splitX = (uint32_t)ceil(sqrt((double)PIPELINE_COUNT));
+		splitY = splitX;
 
 		prepared = true;
 	}
@@ -491,11 +762,6 @@ public:
 			return;
 		VulkanExampleBase::prepareFrame();
 		updateUniformBuffers();
-		if (newPipelineCreated) {
-			// Make sure no work is pending before using the newly created pipeline
-			vkQueueWaitIdle(queue);
-			newPipelineCreated = false;
-		}
 		buildCommandBuffer();
 		VulkanExampleBase::submitFrame();
 	}
@@ -503,11 +769,6 @@ public:
 	virtual void OnUpdateUIOverlay(vks::UIOverlay *overlay)
 	{
 		overlay->checkBox("Link time optimization", &linkTimeOptimization);
-		if (overlay->button("New pipeline")) {
-			// Spwan a thread to create a new pipeline in the background
-			std::thread pipelineGenerationThread(&VulkanExample::threadFn, this);
-			pipelineGenerationThread.detach();
-		}
 	}
 };
 
